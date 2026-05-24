@@ -1,0 +1,96 @@
+.overview-page {
+    padding-top: 18px;
+}
+
+.overview-header {
+    margin-bottom: 18px !important;
+}
+
+/* FILTER CARD */
+.overview-filter-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.overview-filter-card label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.overview-filter-card .form-select,
+.overview-filter-card .form-control {
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+}
+
+.overview-filter-card .form-select:focus,
+.overview-filter-card .form-control:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+/* CHART CARD */
+.overview-chart-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 24px;
+    height: 460px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+}
+
+.overview-chart-card h5 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 16px;
+}
+
+.overview-chart-card canvas {
+    width: 100% !important;
+    height: 360px !important;
+    max-height: 360px !important;
+}
+
+/* RESPONSIVE */
+@media (max-width: 992px) {
+    .overview-chart-card {
+        height: 430px;
+    }
+
+    .overview-chart-card canvas {
+        height: 330px !important;
+        max-height: 330px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .overview-title {
+        font-size: 28px;
+    }
+
+    .overview-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 12px;
+    }
+
+    .overview-chart-card {
+        height: 390px;
+        padding: 20px;
+    }
+
+    .overview-chart-card canvas {
+        height: 300px !important;
+        max-height: 300px !important;
+    }
+}

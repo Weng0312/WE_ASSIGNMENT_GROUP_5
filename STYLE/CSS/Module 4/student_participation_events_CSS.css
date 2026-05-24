@@ -1,0 +1,96 @@
+.participation-report-page {
+    padding-top: 18px;
+}
+
+.participation-report-header {
+    margin-bottom: 18px !important;
+}
+
+/* FILTER CARD */
+.participation-filter-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.participation-filter-card label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.participation-filter-card .form-select,
+.participation-filter-card .form-control {
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+}
+
+.participation-filter-card .form-select:focus,
+.participation-filter-card .form-control:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+/* CHART CARD */
+.participation-chart-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 24px;
+    height: 460px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+}
+
+.participation-chart-card h5 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 16px;
+}
+
+.participation-chart-card canvas {
+    width: 100% !important;
+    height: 360px !important;
+    max-height: 360px !important;
+}
+
+/* RESPONSIVE */
+@media (max-width: 992px) {
+    .participation-chart-card {
+        height: 430px;
+    }
+
+    .participation-chart-card canvas {
+        height: 330px !important;
+        max-height: 330px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .participation-report-title {
+        font-size: 28px;
+    }
+
+    .participation-report-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 12px;
+    }
+
+    .participation-chart-card {
+        height: 390px;
+        padding: 20px;
+    }
+
+    .participation-chart-card canvas {
+        height: 300px !important;
+        max-height: 300px !important;
+    }
+}

@@ -1,0 +1,222 @@
+.active-clubs-page {
+    padding-bottom: 40px;
+}
+
+.active-clubs-header {
+    margin-bottom: 24px;
+}
+
+.active-clubs-title {
+    font-size: 30px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+
+.active-clubs-subtitle {
+    color: #64748b;
+    font-size: 15px;
+    margin-bottom: 0;
+}
+
+/* ===============================
+   FILTER CARD
+================================ */
+.active-clubs-filter-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 22px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    margin-bottom: 24px;
+}
+
+.active-clubs-filter-card label {
+    display: block;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 7px;
+}
+
+.active-clubs-filter-card .form-select {
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    color: #334155;
+    background-color: #ffffff;
+    padding: 0 12px;
+    box-shadow: none;
+}
+
+.active-clubs-filter-card .form-select:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+/* ===============================
+   LIST CARD
+================================ */
+.active-clubs-list-card {
+    margin-top: 0;
+    margin-bottom: 30px;
+}
+
+.active-clubs-list-card h5 {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.sort-note {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 7px 12px;
+    border-radius: 999px;
+}
+
+/* ===============================
+   TABLE
+================================ */
+.active-clubs-table {
+    margin-bottom: 0;
+}
+
+.active-clubs-table thead {
+    background: #f1f5f9;
+}
+
+.active-clubs-table th {
+    font-size: 14px;
+    font-weight: 800;
+    color: #334155;
+    padding: 14px;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.active-clubs-table td {
+    font-size: 14px;
+    color: #475569;
+    padding: 14px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+
+.active-clubs-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.active-clubs-table tbody tr:first-child {
+    background: #fffbeb;
+}
+
+.active-clubs-table tbody tr:first-child td {
+    font-weight: 600;
+}
+
+/* ===============================
+   RANK BADGE
+================================ */
+.rank-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.rank-badge.first {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.rank-badge.second {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.rank-badge.third {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.rank-badge.normal {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+/* ===============================
+   ATTENDANCE RATE BADGE
+================================ */
+.rate-badge {
+    display: inline-block;
+    background: #dcfce7;
+    color: #15803d;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+/* ===============================
+   RESPONSIVE
+================================ */
+@media (max-width: 992px) {
+    .active-clubs-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 12px;
+    }
+
+    .active-clubs-header .btn {
+        align-self: flex-start;
+    }
+}
+
+@media (max-width: 768px) {
+    .active-clubs-title {
+        font-size: 24px;
+    }
+
+    .active-clubs-subtitle {
+        font-size: 14px;
+    }
+
+    .active-clubs-filter-card {
+        padding: 18px;
+    }
+
+    .active-clubs-filter-card .form-select {
+        height: 42px;
+        font-size: 13px;
+    }
+
+    .sort-note {
+        display: none;
+    }
+
+    .active-clubs-table th,
+    .active-clubs-table td {
+        font-size: 13px;
+        padding: 12px;
+    }
+
+    .rank-badge {
+        width: 30px;
+        height: 30px;
+        font-size: 13px;
+    }
+
+    .rate-badge {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+}

@@ -1,0 +1,93 @@
+/* REPORT MENU BUTTONS */
+.report-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.report-menu-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 28px;
+    text-decoration: none;
+    color: #0f172a;
+    min-height: 220px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    transition: 0.25s ease;
+}
+
+.report-menu-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    color: #0f172a;
+}
+
+.report-menu-icon {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+}
+
+.report-menu-icon i {
+    font-size: 28px;
+}
+
+.report-menu-icon.blue {
+    background: #eaf1ff;
+    color: #2563eb;
+}
+
+.report-menu-icon.green {
+    background: #e8f8ef;
+    color: #16a34a;
+}
+
+.report-menu-icon.purple {
+    background: #f3e8ff;
+    color: #7c3aed;
+}
+
+.report-menu-icon.orange {
+    background: #fff3cd;
+    color: #f59e0b;
+}
+
+.report-menu-icon.red {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.report-menu-icon.cyan {
+    background: #cffafe;
+    color: #0891b2;
+}
+
+.report-menu-card h4 {
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.report-menu-card p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.5;
+}
+
+@media (max-width: 1200px) {
+    .report-menu-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .report-menu-grid {
+        grid-template-columns: 1fr;
+    }
+}

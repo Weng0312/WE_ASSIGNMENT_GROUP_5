@@ -1,0 +1,100 @@
+.pp-page {
+    padding: 15px 35px 35px;
+    background: #f8faff;
+    min-height: 100vh;
+}
+
+.pp-title {
+    font-size: 42px;
+    font-weight: 800;
+    color: #0b132b;
+    margin-bottom: 5px;
+}
+
+.pp-subtitle {
+    font-size: 18px;
+    color: #53627c;
+    margin-bottom: 20px;
+}
+
+.pp-card,
+.pp-filter-card,
+.pp-table-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+}
+
+.pp-icon {
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 36px;
+    margin-right: 20px;
+}
+
+.green {
+    background: #dff5eb;
+    color: #0c9b5f;
+}
+
+.purple {
+    background: #eee5ff;
+    color: #5a38d6;
+}
+
+.blue {
+    background: #e7f0ff;
+    color: #0d6efd;
+}
+
+.pp-card h6 {
+    font-weight: 700;
+}
+
+.pp-card h2 {
+    font-weight: 800;
+    margin-bottom: 5px;
+}
+
+.pp-card p {
+    margin: 0;
+    color: #5b6475;
+}
+
+.text-purple {
+    color: #5a38d6;
+}
+
+.pp-filter-card label {
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.form-select {
+    height: 48px;
+}
+
+.reset-btn {
+    height: 48px;
+    border: 1px solid #d6dceb;
+    background: white;
+    font-weight: 600;
+}
+
+.reset-btn:hover {
+    background: #f5f7ff;
+}
+
+.pp-table-card h5 {
+    font-weight: 800;
+    margin-bottom: 20px;
+}
+
+.table th {
+    font-weight: 700;
+}

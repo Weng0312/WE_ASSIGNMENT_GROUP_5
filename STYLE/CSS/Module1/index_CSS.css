@@ -1,0 +1,77 @@
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+
+    background: url("../../../Images/campus.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+
+    font-family: Arial, sans-serif;
+}
+
+.system-header {
+    position: absolute;
+    top: 30px;
+    left: 40px;
+
+    display: flex;
+    align-items: center;
+    gap: 15px;
+
+    color: white;
+}
+
+.system-logo {
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
+}
+
+.system-title {
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 1.3;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.right-section {
+    width: 500px;
+    margin-right: 80px;
+}
+
+.login-card {
+    border: none;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.95);
+
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.card-body {
+    padding: 50px;
+}
+
+.form-control {
+    height: 50px;
+    border-radius: 10px;
+    background-color: #f8f9fa;
+}
+
+.btn-primary {
+    height: 50px;
+    border-radius: 10px;
+    background: #0d6efd;
+    border: none;
+    font-weight: bold;
+}
+
+.btn-primary:hover {
+    background: #0b5ed7;
+}

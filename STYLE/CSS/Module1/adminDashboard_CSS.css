@@ -1,0 +1,30 @@
+.stat-card 
+{
+    transition: transform 0.2s;
+    border: none;
+}
+
+.stat-card:hover 
+{
+    transform: translateY(-5px);
+}
+
+.bg-gradient-primary
+{
+     background: linear-gradient(45deg, #4e73df 0%, #224abe 100%);
+}
+
+.bg-gradient-success
+{
+   background: linear-gradient(45deg, #1cc88a 0%, #13855c 100%);
+}
+
+.bg-gradient-info
+ {
+    background: linear-gradient(45deg, #36b9cc 0%, #258391 100%);
+}
+
+canvas {
+    display: block;
+    text-decoration: none;
+}

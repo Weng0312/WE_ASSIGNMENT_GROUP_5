@@ -1,0 +1,93 @@
+:root {
+    --sidebar-width: 250px;
+    --admin-color: #4e73df;
+    --student-color: #1cc88a;
+    --committee-color: #36b9cc;
+}
+
+#wrapper {
+    display: flex !important;
+    width: 100% !important;
+    height: calc(100vh - 70px) !important;
+    margin-top: 70px !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+}
+
+#sidebar {
+    position: fixed !important;
+    top: 70px !important;
+    left: 0 !important;
+    z-index: 9998 !important;
+
+    min-width: var(--sidebar-width) !important;
+    max-width: var(--sidebar-width) !important;
+    width: var(--sidebar-width) !important;
+
+    height: calc(100vh - 70px) !important;
+    min-height: calc(100vh - 70px) !important;
+
+    overflow: hidden !important;
+
+    background: #fff;
+    color: #000;
+    transition: all 0.3s;
+    border-right: 1px solid #e5e7eb;
+}
+
+#wrapper > #content {
+    width: calc(100% - var(--sidebar-width)) !important;
+    height: calc(100vh - 70px) !important;
+    min-height: calc(100vh - 70px) !important;
+    margin-left: var(--sidebar-width) !important;
+    padding: 28px 42px !important;
+    background: #f8f9fc !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+#sidebar .sidebar-header {
+    padding: 25px 20px;
+    background: #f3f4f6;
+}
+
+#sidebar .sidebar-header h4,
+#sidebar .sidebar-header small {
+    color: #000;
+}
+
+#sidebar ul.components {
+    padding: 20px 0;
+}
+
+#sidebar ul li {
+    margin-bottom: 8px;
+}
+
+#sidebar ul li a {
+    padding: 16px 28px;
+    font-size: 1.15em;
+    display: block;
+    color: #000;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+#sidebar ul li a:hover {
+    color: #000;
+    background: rgba(0,0,0,0.03);
+}
+
+#sidebar ul li.active > a {
+    color: #000;
+    background: rgba(0,0,0,0.03);
+    border-left: 5px solid #000;
+    font-weight: 600;
+}
+
+.user-info {
+    padding: 20px;
+    font-size: 0.9em;
+    border-top: 1px solid #e5e7eb;
+    margin-top: auto;
+}
