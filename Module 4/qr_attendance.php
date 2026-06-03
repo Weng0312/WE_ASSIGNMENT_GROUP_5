@@ -23,9 +23,7 @@ if (!$eventID) {
 /* =========================
    QR LINK TO SAVE INTO DATABASE
 ========================= */
-$qrLink =
-    "http://localhost/WE_ASSIGNMENT/Module%204/qr_attendance.php?event_id="
-    . urlencode($eventID);
+$qrLink = buildQrAttendanceUrl($eventID);
 
 /* =========================
    GET EVENT DETAILS

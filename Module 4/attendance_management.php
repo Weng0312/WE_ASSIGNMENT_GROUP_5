@@ -1,35 +1,22 @@
 <?php
 session_start();
+
 require_once __DIR__ . '/../db_connect.php';
 
 /** @var PDO $pdo */
 
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
 $_SESSION['current_module'] = 'committee';
 
-$message = $_SESSION['flash_message'] ?? '';
-$messageType = $_SESSION['flash_type'] ?? '';
-unset($_SESSION['flash_message']);
-unset($_SESSION['flash_type']);
-
-if (
-    !isset($_SESSION['user_id']) ||
-    (
-        $_SESSION['role'] !== 'Administrator' &&
-        strpos($_SESSION['role'], 'Committee') === false
-    )
-) {
-    header("Location: ../Module 1/student_dashboard.php");
-    exit();
+/* ===============================
+   BASIC FUNCTIONS
+================================ */
+function e($value)
+{
+    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
 }
 
-//$message = '';
-//$messageType = '';
-
-$selectedEventID = $_GET['event_id'] ?? $_POST['event_id'] ?? '';
-
-/* ===============================
-   POINTS FUNCTION
-================================ */
 function getPoints($attendanceStatus)
 {
     if ($attendanceStatus === 'Present') {
@@ -72,13 +59,148 @@ function getBadgeClass($attendanceStatus)
     return 'pending';
 }
 
+function checkAttendanceAccess()
+{
+    if (
+        !isset($_SESSION['user_id']) ||
+        (
+            $_SESSION['role'] !== 'Administrator' &&
+            strpos($_SESSION['role'], 'Committee') === false
+        )
+    ) {
+        header("Location: ../Module 1/student_dashboard.php");
+        exit();
+    }
+}
+
+/* ===============================
+   DYNAMIC QR LINK
+   NO MORE LOCALHOST
+================================ */
+function getModule4BaseUrl()
+{
+    $scheme = 'http';
+
+    if (
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+        (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
+    ) {
+        $scheme = 'https';
+    }
+
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $dir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+
+    return $scheme . '://' . $host . rtrim($dir, '/');
+}
+
+function buildQrAttendanceUrl($eventID)
+{
+    return getModule4BaseUrl() . '/qr_attendance.php?event_id=' . urlencode($eventID);
+}
+
+/* ===============================
+   AUTO MARK ABSENT AFTER EVENT ENDED
+================================ */
+function markAbsentAfterEvent(PDO $pdo, $eventID)
+{
+    if (empty($eventID)) {
+        return 0;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT
+            er.EventRegistration_ID
+        FROM event_registration er
+
+        JOIN event e
+            ON er.Event_ID = e.Event_ID
+
+        LEFT JOIN event_attendance ea
+            ON er.EventRegistration_ID = ea.EventRegistrationID
+
+        WHERE er.Event_ID = ?
+          AND er.eventRegistrationStatus = 'Approved'
+          AND ea.Attendance_ID IS NULL
+          AND CONCAT(e.eventDate, ' ', e.eventEndTime) < NOW()
+    ");
+
+    $stmt->execute([$eventID]);
+    $missingRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($missingRows)) {
+        return 0;
+    }
+
+    $insertAttendance = $pdo->prepare("
+        INSERT INTO event_attendance
+        (
+            attendanceType,
+            attendanceQR,
+            attendanceStatus,
+            checkInTime,
+            EventRegistrationID
+        )
+        VALUES (?, ?, ?, ?, ?)
+    ");
+
+    $insertPoint = $pdo->prepare("
+        INSERT INTO points
+        (
+            pointsValue,
+            Attendance_ID
+        )
+        VALUES (?, ?)
+    ");
+
+    $createdCount = 0;
+
+    foreach ($missingRows as $row) {
+        $insertAttendance->execute([
+            'MANUAL',
+            'AUTO_ABSENT',
+            'Absent',
+            null,
+            $row['EventRegistration_ID']
+        ]);
+
+        $attendanceID = $pdo->lastInsertId();
+
+        $insertPoint->execute([
+            getPoints('Absent'),
+            $attendanceID
+        ]);
+
+        $createdCount++;
+    }
+
+    return $createdCount;
+}
+
+/* ===============================
+   ACCESS CONTROL
+================================ */
+checkAttendanceAccess();
+
+/* ===============================
+   FLASH MESSAGE
+================================ */
+$message = $_SESSION['flash_message'] ?? '';
+$messageType = $_SESSION['flash_type'] ?? '';
+unset($_SESSION['flash_message']);
+unset($_SESSION['flash_type']);
+
+/* ===============================
+   SELECTED EVENT
+================================ */
+$selectedEventID = $_GET['event_id'] ?? $_POST['event_id'] ?? '';
+
 /* ===============================
    FETCH EVENTS
-   COMMITTEE ONLY SEE OWN CLUB EVENTS
+   ADMIN = ALL EVENTS
+   COMMITTEE = OWN CLUB EVENTS ONLY
 ================================ */
-
 if ($_SESSION['role'] === 'Administrator') {
-
     $eventStmt = $pdo->query("
         SELECT
             Event_ID,
@@ -86,66 +208,89 @@ if ($_SESSION['role'] === 'Administrator') {
             eventDate,
             eventStartTime,
             eventEndTime,
-            eventVenue
+            eventVenue,
+            Club_ID
         FROM event
         ORDER BY eventDate DESC
     ");
 
-    $events =
-        $eventStmt->fetchAll(PDO::FETCH_ASSOC);
+    $events = $eventStmt->fetchAll(PDO::FETCH_ASSOC);
 
 } else {
+    if (!empty($_SESSION['committee_club_id'])) {
+        $eventStmt = $pdo->prepare("
+            SELECT
+                Event_ID,
+                eventTitle,
+                eventDate,
+                eventStartTime,
+                eventEndTime,
+                eventVenue,
+                Club_ID
+            FROM event
+            WHERE Club_ID = ?
+            ORDER BY eventDate DESC
+        ");
 
-    $eventStmt = $pdo->prepare("
-        SELECT
-            e.Event_ID,
-            e.eventTitle,
-            e.eventDate,
-            e.eventStartTime,
-            e.eventEndTime,
-            e.eventVenue
-        FROM event e
-        WHERE EXISTS (
-            SELECT 1
-            FROM club_membership cm
-            WHERE cm.Club_ID = e.Club_ID
-              AND cm.User_ID = ?
-              AND TRIM(cm.membershipStatus) = 'Active'
-              AND TRIM(cm.membershipRole) <> 'Member'
-        )
-        ORDER BY e.eventDate DESC
-    ");
+        $eventStmt->execute([
+            $_SESSION['committee_club_id']
+        ]);
 
-    $eventStmt->execute([
-        $_SESSION['user_id']
-    ]);
+    } else {
+        $eventStmt = $pdo->prepare("
+            SELECT
+                e.Event_ID,
+                e.eventTitle,
+                e.eventDate,
+                e.eventStartTime,
+                e.eventEndTime,
+                e.eventVenue,
+                e.Club_ID
+            FROM event e
+            WHERE EXISTS (
+                SELECT 1
+                FROM club_membership cm
+                WHERE cm.Club_ID = e.Club_ID
+                  AND cm.User_ID = ?
+                  AND TRIM(cm.membershipStatus) = 'Active'
+                  AND TRIM(cm.membershipRole) <> 'Member'
+            )
+            ORDER BY e.eventDate DESC
+        ");
 
-    $events =
-        $eventStmt->fetchAll(PDO::FETCH_ASSOC);
+        $eventStmt->execute([
+            $_SESSION['user_id']
+        ]);
+    }
+
+    $events = $eventStmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-$allowedEventIDs =
-    array_column($events, 'Event_ID');
+$allowedEventIDs = array_column($events, 'Event_ID');
 
 if (
     empty($selectedEventID) ||
     !in_array($selectedEventID, $allowedEventIDs)
 ) {
-
-    $selectedEventID =
-        !empty($events)
-            ? $events[0]['Event_ID']
-            : '';
+    $selectedEventID = !empty($events)
+        ? $events[0]['Event_ID']
+        : '';
 }
 
 /* ===============================
-   FETCH ALL REGISTERED STUDENTS
-   FOR MANUAL ATTENDANCE DROPDOWN
+   AUTO ABSENT
+================================ */
+if (!empty($selectedEventID)) {
+    markAbsentAfterEvent($pdo, $selectedEventID);
+}
+
+/* ===============================
+   FETCH REGISTERED STUDENTS
+   FOR MANUAL ATTENDANCE SEARCH
 ================================ */
 $pendingStudents = [];
 
 if (!empty($selectedEventID)) {
-
     $pendingStudentStmt = $pdo->prepare("
         SELECT
             s.User_ID,
@@ -162,8 +307,7 @@ if (!empty($selectedEventID)) {
             ON er.User_ID = u.User_ID
 
         LEFT JOIN event_attendance ea
-            ON er.EventRegistration_ID =
-               ea.EventRegistrationID
+            ON er.EventRegistration_ID = ea.EventRegistrationID
 
         WHERE er.Event_ID = ?
           AND er.eventRegistrationStatus = 'Approved'
@@ -175,58 +319,55 @@ if (!empty($selectedEventID)) {
         $selectedEventID
     ]);
 
-    $pendingStudents =
-        $pendingStudentStmt->fetchAll(PDO::FETCH_ASSOC);
+    $pendingStudents = $pendingStudentStmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 /* ===============================
-   FETCH ATTENDANCE TABLE
-   + FETCH POINTS TABLE
-   SHOW ONLY SAVED ATTENDANCE
+   FETCH SAVED ATTENDANCE TABLE
 ================================ */
-$tableStmt = $pdo->prepare("
-    SELECT
-        er.EventRegistration_ID,
-        er.EventRegistration_ID
-            AS EventRegistrationID,
-        s.studentID,
-        u.userName,
-        ea.Attendance_ID,
-        ea.attendanceType,
-        ea.attendanceQR,
-        ea.attendanceStatus,
-        ea.checkInTime,
-        p.pointsValue
-    FROM event_registration er
+$students = [];
 
-    JOIN student s
-        ON er.User_ID = s.User_ID
+if (!empty($selectedEventID)) {
+    $tableStmt = $pdo->prepare("
+        SELECT
+            er.EventRegistration_ID,
+            er.EventRegistration_ID AS EventRegistrationID,
+            s.studentID,
+            u.userName,
+            ea.Attendance_ID,
+            ea.attendanceType,
+            ea.attendanceQR,
+            ea.attendanceStatus,
+            ea.checkInTime,
+            p.pointsValue
+        FROM event_registration er
 
-    JOIN user u
-        ON er.User_ID = u.User_ID
+        JOIN student s
+            ON er.User_ID = s.User_ID
 
-    JOIN event_attendance ea
-        ON er.EventRegistration_ID =
-           ea.EventRegistrationID
+        JOIN user u
+            ON er.User_ID = u.User_ID
 
-    LEFT JOIN points p
-        ON ea.Attendance_ID =
-           p.Attendance_ID
+        JOIN event_attendance ea
+            ON er.EventRegistration_ID = ea.EventRegistrationID
 
-    WHERE er.Event_ID = ?
-      AND er.eventRegistrationStatus = 'Approved'
+        LEFT JOIN points p
+            ON ea.Attendance_ID = p.Attendance_ID
 
-    ORDER BY
-        ea.checkInTime DESC,
-        u.userName ASC
-");
+        WHERE er.Event_ID = ?
+          AND er.eventRegistrationStatus = 'Approved'
 
-$tableStmt->execute([
-    $selectedEventID
-]);
+        ORDER BY
+            ea.checkInTime DESC,
+            u.userName ASC
+    ");
 
-$students =
-    $tableStmt->fetchAll(PDO::FETCH_ASSOC);
+    $tableStmt->execute([
+        $selectedEventID
+    ]);
+
+    $students = $tableStmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 /* ===============================
    EVENT INFO
@@ -234,13 +375,21 @@ $students =
 $eventInfo = null;
 
 foreach ($events as $event) {
-
-    if ($event['Event_ID']
-        == $selectedEventID) {
-
+    if ($event['Event_ID'] == $selectedEventID) {
         $eventInfo = $event;
         break;
     }
+}
+
+$qrLink = '';
+$qrImage = '';
+
+if (!empty($selectedEventID)) {
+    $qrLink = buildQrAttendanceUrl($selectedEventID);
+
+    $qrImage =
+        "https://api.qrserver.com/v1/create-qr-code/?size=290x290&data="
+        . urlencode($qrLink);
 }
 ?>
 
@@ -248,7 +397,6 @@ foreach ($events as $event) {
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
 
     <title>Attendance Management</title>
@@ -258,7 +406,6 @@ foreach ($events as $event) {
     <link href="../STYLE/BOOTSTRAP/bootstrap.min.css" rel="stylesheet">
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-
 </head>
 
 <body>
@@ -276,50 +423,47 @@ foreach ($events as $event) {
             <h1>Attendance Management Page</h1>
 
             <p class="subtitle">
-                Mark attendance using QR scan
-                or manual update.
+                Mark attendance using QR scan or manual update.
             </p>
 
             <?php if (!empty($message)): ?>
-
-                <div class="alert alert-<?php echo $messageType; ?>">
-
-                    <?php echo htmlspecialchars($message); ?>
-
+                <div class="alert alert-<?php echo e($messageType); ?>">
+                    <?php echo e($message); ?>
                 </div>
-
             <?php endif; ?>
 
-            <form method="GET" class="mb-4">
+            <?php if (empty($events)): ?>
 
-                <label class="fw-bold mb-2">
-                    Select Event
-                </label>
+                <div class="alert alert-warning">
+                    No event found for your account.
+                </div>
 
-                <select name="event_id"
-                        class="form-select w-50"
-                        onchange="this.form.submit()">
+            <?php else: ?>
 
-                    <?php foreach ($events as $event): ?>
+                <form method="GET" class="mb-4">
 
-                        <option value="<?php echo $event['Event_ID']; ?>"
-                            <?php
-                            echo ($selectedEventID == $event['Event_ID'])
-                                ? 'selected'
-                                : '';
-                            ?>>
+                    <label class="fw-bold mb-2">
+                        Select Event
+                    </label>
 
-                            <?php
-                            echo htmlspecialchars($event['eventTitle']);
-                            ?>
+                    <select name="event_id"
+                            class="form-select w-50"
+                            onchange="this.form.submit()">
 
-                        </option>
+                        <?php foreach ($events as $event): ?>
+                            <option value="<?php echo e($event['Event_ID']); ?>"
+                                <?php echo ($selectedEventID == $event['Event_ID']) ? 'selected' : ''; ?>>
 
-                    <?php endforeach; ?>
+                                <?php echo e($event['eventTitle']); ?>
 
-                </select>
+                            </option>
+                        <?php endforeach; ?>
 
-            </form>
+                    </select>
+
+                </form>
+
+            <?php endif; ?>
 
             <div class="top-cards">
 
@@ -330,62 +474,30 @@ foreach ($events as $event) {
                     <div class="event-info">
 
                         <div class="event-icon">
-
                             <i class="fa-solid fa-calendar-days"></i>
-
                         </div>
 
                         <div>
 
                             <h4>
-                                <?php
-                                echo htmlspecialchars(
-                                    $eventInfo['eventTitle']
-                                    ?? 'No Event Selected'
-                                );
-                                ?>
+                                <?php echo e($eventInfo['eventTitle'] ?? 'No Event Selected'); ?>
                             </h4>
 
                             <p>
                                 <i class="fa-solid fa-calendar-days"></i>
-
-                                <?php
-                                echo htmlspecialchars(
-                                    $eventInfo['eventDate']
-                                    ?? '-'
-                                );
-                                ?>
+                                <?php echo e($eventInfo['eventDate'] ?? '-'); ?>
                             </p>
 
                             <p>
                                 <i class="fa-solid fa-location-dot"></i>
-
-                                <?php
-                                echo htmlspecialchars(
-                                    $eventInfo['eventVenue']
-                                    ?? '-'
-                                );
-                                ?>
+                                <?php echo e($eventInfo['eventVenue'] ?? '-'); ?>
                             </p>
 
                             <p>
                                 <i class="fa-solid fa-clock"></i>
-
-                                <?php
-                                echo htmlspecialchars(
-                                    $eventInfo['eventStartTime']
-                                    ?? '-'
-                                );
-                                ?>
-
+                                <?php echo e($eventInfo['eventStartTime'] ?? '-'); ?>
                                 -
-
-                                <?php
-                                echo htmlspecialchars(
-                                    $eventInfo['eventEndTime']
-                                    ?? '-'
-                                );
-                                ?>
+                                <?php echo e($eventInfo['eventEndTime'] ?? '-'); ?>
                             </p>
 
                         </div>
@@ -399,39 +511,38 @@ foreach ($events as $event) {
                     <h5>QR Scan</h5>
 
                     <p>
-                        Scan participant QR code
-                        to mark attendance.
+                        Scan participant QR code to mark attendance.
                     </p>
 
-                    <?php
-                    $qrLink =
-                        "http://localhost/WE_ASSIGNMENT/Module%204/qr_attendance.php?event_id="
-                        . urlencode($selectedEventID);
+                    <?php if (!empty($qrImage)): ?>
 
-                    $qrImage =
-                        "https://api.qrserver.com/v1/create-qr-code/?size=290x290&data="
-                        . urlencode($qrLink);
-                    ?>
+                        <div class="qr-box">
 
-                    <div class="qr-box">
+                            <img src="<?php echo e($qrImage); ?>"
+                                 alt="QR Code">
 
-                        <img src="<?php echo htmlspecialchars($qrImage); ?>"
-                             alt="QR Code">
+                        </div>
 
-                    </div>
+                        <button type="button"
+                                class="btn-blue"
+                                onclick='openQRPopup(
+                                    <?php echo json_encode($qrImage); ?>,
+                                    <?php echo json_encode($eventInfo['eventTitle'] ?? 'Attendance QR Code'); ?>,
+                                    <?php echo json_encode($qrLink); ?>
+                                )'>
 
-                    <button type="button"
-                            class="btn-blue"
-                            onclick="openQRPopup(
-                                '<?php echo htmlspecialchars($qrImage, ENT_QUOTES); ?>',
-                                '<?php echo htmlspecialchars($eventInfo['eventTitle'] ?? 'Attendance QR Code', ENT_QUOTES); ?>',
-                                '<?php echo htmlspecialchars($qrLink, ENT_QUOTES); ?>'
-                            )">
+                            <i class="fa-solid fa-qrcode"></i>
+                            Scan QR
 
-                        <i class="fa-solid fa-qrcode"></i>
-                        Scan QR
+                        </button>
 
-                    </button>
+                    <?php else: ?>
+
+                        <div class="alert alert-warning mb-0">
+                            Please select an event first.
+                        </div>
+
+                    <?php endif; ?>
 
                 </div>
 
@@ -441,8 +552,7 @@ foreach ($events as $event) {
 
                     <p>
                         Search by student ID or name.
-                        The system will automatically mark
-                        the student as Present or Late
+                        The system will automatically mark the student as Present or Late
                         based on the event start time.
                     </p>
 
@@ -455,6 +565,7 @@ foreach ($events as $event) {
                             id="manualSearch"
                             placeholder="Search student ID or name..."
                             onkeyup="showStudentList()"
+                            <?php echo empty($selectedEventID) ? 'disabled' : ''; ?>
                         >
 
                     </div>
@@ -466,11 +577,7 @@ foreach ($events as $event) {
 
                         <input type="hidden"
                                name="event_id"
-                               value="<?php
-                               echo htmlspecialchars(
-                                   $selectedEventID
-                               );
-                               ?>">
+                               value="<?php echo e($selectedEventID); ?>">
 
                         <input type="hidden"
                                name="user_id"
@@ -478,9 +585,7 @@ foreach ($events as $event) {
 
                         <div id="selectedStudentText"
                              class="selected-student-text">
-
                             No student selected
-
                         </div>
 
                         <div class="d-flex gap-2 flex-wrap">
@@ -488,7 +593,8 @@ foreach ($events as $event) {
                             <button type="submit"
                                     name="mark_attendance"
                                     value="1"
-                                    class="btn btn-outline-success">
+                                    class="btn btn-outline-success"
+                                    <?php echo empty($selectedEventID) ? 'disabled' : ''; ?>>
 
                                 <i class="fa-solid fa-save"></i>
                                 Save Attendance
@@ -538,14 +644,12 @@ foreach ($events as $event) {
                     <thead>
 
                         <tr>
-
                             <th>Student ID</th>
                             <th>Name</th>
                             <th>Status</th>
                             <th>Check-In Time</th>
                             <th>Points</th>
                             <th>Action</th>
-
                         </tr>
 
                     </thead>
@@ -559,43 +663,26 @@ foreach ($events as $event) {
                                 <tr>
 
                                     <td>
-                                        <?php
-                                        echo htmlspecialchars(
-                                            $row['studentID']
-                                        );
-                                        ?>
+                                        <?php echo e($row['studentID']); ?>
                                     </td>
 
                                     <td>
-                                        <?php
-                                        echo htmlspecialchars(
-                                            $row['userName']
-                                        );
-                                        ?>
+                                        <?php echo e($row['userName']); ?>
                                     </td>
 
                                     <td>
-                                        <span class="badge <?php echo getBadgeClass($row['attendanceStatus']); ?>">
-                                            <?php
-                                            echo htmlspecialchars(
-                                                $row['attendanceStatus']
-                                            );
-                                            ?>
+                                        <span class="badge <?php echo e(getBadgeClass($row['attendanceStatus'])); ?>">
+                                            <?php echo e($row['attendanceStatus']); ?>
                                         </span>
                                     </td>
 
                                     <td>
-                                        <?php
-                                        echo htmlspecialchars(
-                                            $row['checkInTime']
-                                            ?? '-'
-                                        );
-                                        ?>
+                                        <?php echo e($row['checkInTime'] ?? '-'); ?>
                                     </td>
 
                                     <td>
                                         <?php
-                                        echo htmlspecialchars(
+                                        echo e(
                                             $row['pointsValue']
                                             ?? getPoints($row['attendanceStatus'])
                                         );
@@ -607,7 +694,7 @@ foreach ($events as $event) {
                                         <button type="button"
                                                 class="btn btn-sm btn-warning"
                                                 data-bs-toggle="modal"
-                                                data-bs-target="#editModal<?php echo $row['EventRegistrationID']; ?>">
+                                                data-bs-target="#editModal<?php echo e($row['EventRegistrationID']); ?>">
 
                                             <i class="fa-solid fa-pen"></i>
                                             Edit
@@ -621,11 +708,11 @@ foreach ($events as $event) {
 
                                             <input type="hidden"
                                                    name="event_id"
-                                                   value="<?php echo htmlspecialchars($selectedEventID); ?>">
+                                                   value="<?php echo e($selectedEventID); ?>">
 
                                             <input type="hidden"
                                                    name="event_registration_id"
-                                                   value="<?php echo $row['EventRegistrationID']; ?>">
+                                                   value="<?php echo e($row['EventRegistrationID']); ?>">
 
                                             <button type="submit"
                                                     name="delete_attendance"
@@ -639,7 +726,7 @@ foreach ($events as $event) {
                                         </form>
 
                                         <div class="modal fade"
-                                             id="editModal<?php echo $row['EventRegistrationID']; ?>"
+                                             id="editModal<?php echo e($row['EventRegistrationID']); ?>"
                                              tabindex="-1">
 
                                             <div class="modal-dialog">
@@ -656,7 +743,8 @@ foreach ($events as $event) {
 
                                                             <button type="button"
                                                                     class="btn-close"
-                                                                    data-bs-dismiss="modal"></button>
+                                                                    data-bs-dismiss="modal">
+                                                            </button>
 
                                                         </div>
 
@@ -664,11 +752,11 @@ foreach ($events as $event) {
 
                                                             <input type="hidden"
                                                                    name="event_id"
-                                                                   value="<?php echo htmlspecialchars($selectedEventID); ?>">
+                                                                   value="<?php echo e($selectedEventID); ?>">
 
                                                             <input type="hidden"
                                                                    name="event_registration_id"
-                                                                   value="<?php echo $row['EventRegistrationID']; ?>">
+                                                                   value="<?php echo e($row['EventRegistrationID']); ?>">
 
                                                             <div class="mb-3">
 
@@ -678,11 +766,7 @@ foreach ($events as $event) {
 
                                                                 <input type="text"
                                                                        class="form-control"
-                                                                       value="<?php
-                                                                       echo htmlspecialchars(
-                                                                           $row['studentID']
-                                                                       );
-                                                                       ?>"
+                                                                       value="<?php echo e($row['studentID']); ?>"
                                                                        readonly>
 
                                                             </div>
@@ -695,11 +779,7 @@ foreach ($events as $event) {
 
                                                                 <input type="text"
                                                                        class="form-control"
-                                                                       value="<?php
-                                                                       echo htmlspecialchars(
-                                                                           $row['userName']
-                                                                       );
-                                                                       ?>"
+                                                                       value="<?php echo e($row['userName']); ?>"
                                                                        readonly>
 
                                                             </div>
@@ -715,38 +795,22 @@ foreach ($events as $event) {
                                                                         required>
 
                                                                     <option value="Present"
-                                                                        <?php
-                                                                        echo ($row['attendanceStatus'] === 'Present')
-                                                                            ? 'selected'
-                                                                            : '';
-                                                                        ?>>
+                                                                        <?php echo ($row['attendanceStatus'] === 'Present') ? 'selected' : ''; ?>>
                                                                         Present
                                                                     </option>
 
                                                                     <option value="Late"
-                                                                        <?php
-                                                                        echo ($row['attendanceStatus'] === 'Late')
-                                                                            ? 'selected'
-                                                                            : '';
-                                                                        ?>>
+                                                                        <?php echo ($row['attendanceStatus'] === 'Late') ? 'selected' : ''; ?>>
                                                                         Late
                                                                     </option>
 
                                                                     <option value="Volunteer"
-                                                                        <?php
-                                                                        echo ($row['attendanceStatus'] === 'Volunteer')
-                                                                            ? 'selected'
-                                                                            : '';
-                                                                        ?>>
+                                                                        <?php echo ($row['attendanceStatus'] === 'Volunteer') ? 'selected' : ''; ?>>
                                                                         Volunteer
                                                                     </option>
 
                                                                     <option value="Absent"
-                                                                        <?php
-                                                                        echo ($row['attendanceStatus'] === 'Absent')
-                                                                            ? 'selected'
-                                                                            : '';
-                                                                        ?>>
+                                                                        <?php echo ($row['attendanceStatus'] === 'Absent') ? 'selected' : ''; ?>>
                                                                         Absent
                                                                     </option>
 
@@ -792,15 +856,10 @@ foreach ($events as $event) {
                         <?php else: ?>
 
                             <tr>
-
-                                <td colspan="7"
+                                <td colspan="6"
                                     class="text-center">
-
-                                    No attendance records found
-                                    for this event.
-
+                                    No attendance records found for this event.
                                 </td>
-
                             </tr>
 
                         <?php endif; ?>
@@ -858,38 +917,34 @@ foreach ($events as $event) {
 <script>
 function openQRPopup(qrImage, eventName, qrLink)
 {
-    document.getElementById("qrPopupImage").src =
-        qrImage;
-
-    document.getElementById("qrPopupEventName").innerText =
-        eventName;
-
-    document.getElementById("qrPopupLink").innerText =
-        qrLink;
-
-    document.getElementById("qrPopup").style.display =
-        "block";
+    document.getElementById("qrPopupImage").src = qrImage;
+    document.getElementById("qrPopupEventName").innerText = eventName;
+    document.getElementById("qrPopupLink").innerText = qrLink;
+    document.getElementById("qrPopup").style.display = "block";
 }
 
 function closeQRPopup()
 {
-    document.getElementById("qrPopup").style.display =
-        "none";
+    document.getElementById("qrPopup").style.display = "none";
 }
 
 document.getElementById("qrPopup").addEventListener(
     "click",
     function (e)
     {
-        if (e.target === this)
-        {
+        if (e.target === this) {
             closeQRPopup();
         }
     }
 );
 
 const students =
-    <?php echo json_encode($pendingStudents); ?>;
+    <?php
+    echo json_encode(
+        $pendingStudents,
+        JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+    );
+    ?>;
 
 function showStudentList()
 {
@@ -904,27 +959,25 @@ function showStudentList()
 
     box.innerHTML = "";
 
-    if (keyword === "")
-    {
+    if (keyword === "") {
         box.style.display = "none";
         return;
     }
 
     const filtered =
         students.filter(student =>
-    {
-        const studentID =
-            student.studentID.toLowerCase();
+        {
+            const studentID =
+                (student.studentID || "").toLowerCase();
 
-        const userName =
-            student.userName.toLowerCase();
+            const userName =
+                (student.userName || "").toLowerCase();
 
-        return studentID.startsWith(keyword)
-            || userName.includes(keyword);
-    });
+            return studentID.startsWith(keyword)
+                || userName.includes(keyword);
+        });
 
-    if (filtered.length === 0)
-    {
+    if (filtered.length === 0) {
         box.innerHTML =
             "<div class='student-suggestion-item'>No student found</div>";
 
@@ -940,28 +993,30 @@ function showStudentList()
         item.className =
             "student-suggestion-item";
 
+        let attendanceText = "";
+
+        if (student.Attendance_ID) {
+            attendanceText =
+                " (" + student.attendanceStatus + ")";
+        }
+
         item.textContent =
             student.studentID
             + " - "
-            + student.userName;
+            + student.userName
+            + attendanceText;
 
         item.onclick = function ()
         {
-            document.getElementById(
-                "manualSearch"
-            ).value =
+            document.getElementById("manualSearch").value =
                 student.studentID
                 + " - "
                 + student.userName;
 
-            document.getElementById(
-                "selectedUserID"
-            ).value =
+            document.getElementById("selectedUserID").value =
                 student.User_ID;
 
-            document.getElementById(
-                "selectedStudentText"
-            ).innerText =
+            document.getElementById("selectedStudentText").innerText =
                 "Selected: "
                 + student.studentID
                 + " - "
