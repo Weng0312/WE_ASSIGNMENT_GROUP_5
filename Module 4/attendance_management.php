@@ -75,7 +75,6 @@ function checkAttendanceAccess()
 
 /* ===============================
    DYNAMIC QR LINK
-   NO MORE LOCALHOST
 ================================ */
 function getModule4BaseUrl()
 {
