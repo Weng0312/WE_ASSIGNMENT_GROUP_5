@@ -73,7 +73,7 @@ $recentUsers = $stmt->fetchAll();
 
             <div class="container-fluid">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="fw-bold">Administrator Dashboard</h2>
+                    <h1 class="h2 fw-bold mb-0">Administrator Dashboard</h1>
                     <span class="text-muted"><?php echo date('l, jS F Y'); ?></span>
                 </div>
 
