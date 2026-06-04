@@ -16,7 +16,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Administrator') {
 }
 
 // --- 1. Fetch Summary Statistics ---
-$stmt = $pdo->query("SELECT COUNT(*) FROM user WHERE userRole = 'Student' OR userRole LIKE 'Committee%'");
+$stmt = $pdo->query("SELECT COUNT(*) FROM user WHERE userRole = 'Student'");
 $totalStudents = $stmt->fetchColumn();
 
 $stmt = $pdo->query("SELECT COUNT(*) FROM club WHERE clubStatus = 'Active'");
@@ -26,10 +26,29 @@ $stmt = $pdo->query("SELECT COUNT(*) FROM event WHERE eventDate >= CURDATE()");
 $upcomingEvents = $stmt->fetchColumn();
 
 // --- 2. Fetch Data for Charts ---
-$stmt = $pdo->query("SELECT userRole, COUNT(*) as count FROM user GROUP BY userRole");
-$roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Count administrators
+$stmt = $pdo->query("SELECT COUNT(*) FROM user WHERE userRole = 'Administrator'");
+$adminCount = (int)$stmt->fetchColumn();
 
-$stmt = $pdo->query("SELECT userName, userRole, userEmail FROM user ORDER BY User_ID DESC LIMIT 5");
+// Count active committee members (distinct User_ID in active club membership where role is not 'Member')
+$stmt = $pdo->query("SELECT COUNT(DISTINCT User_ID) FROM club_membership WHERE membershipStatus = 'Active' AND membershipRole != 'Member'");
+$committeeCount = (int)$stmt->fetchColumn();
+
+// Regular students (all students - committee students)
+$regularStudentCount = max(0, $totalStudents - $committeeCount);
+
+$roleData = [
+    ['userRole' => 'Administrator', 'count' => $adminCount],
+    ['userRole' => 'Student', 'count' => $regularStudentCount],
+    ['userRole' => 'Committee', 'count' => $committeeCount]
+];
+
+$stmt = $pdo->query("
+    SELECT u.userName, u.userRole, u.userEmail, cm.membershipRole
+    FROM user u
+    LEFT JOIN club_membership cm ON u.User_ID = cm.User_ID
+    ORDER BY u.User_ID DESC LIMIT 5
+");
 $recentUsers = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -115,11 +134,15 @@ $recentUsers = $stmt->fetchAll();
                                         </thead>
                                         <tbody>
                                             <?php foreach ($recentUsers as $user): ?>
+                                                <?php
+                                                $isComm = ($user['userRole'] === 'Student' && !empty($user['membershipRole']) && $user['membershipRole'] !== 'Member');
+                                                $displayRole = $isComm ? 'Student (Committee)' : $user['userRole'];
+                                                ?>
                                                 <tr>
                                                     <td class="ps-4 fw-bold">
                                                         <?php echo htmlspecialchars($user['userName']); ?></td>
                                                     <td><span
-                                                            class="badge bg-light text-dark border"><?php echo $user['userRole']; ?></span>
+                                                            class="badge bg-light text-dark border"><?php echo htmlspecialchars($displayRole); ?></span>
                                                     </td>
                                                     <td><?php echo htmlspecialchars($user['userEmail']); ?></td>
                                                 </tr>

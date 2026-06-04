@@ -41,12 +41,13 @@ $committee = $pdo->prepare("
     SELECT 
         u.userName,
         u.User_ID,
-        u.userRole
+        cm.membershipRole
     FROM user u
     INNER JOIN club_membership cm
         ON u.User_ID = cm.User_ID
     WHERE cm.Club_ID = ?
-    AND u.userRole LIKE '%Committee%'
+    AND cm.membershipRole != 'Member'
+    AND cm.membershipStatus = 'Active'
 ");
 $committee->execute([$club_id]);
 $committeeMembers = $committee->fetchAll(PDO::FETCH_ASSOC);
@@ -213,9 +214,9 @@ $committeeMembers = $committee->fetchAll(PDO::FETCH_ASSOC);
                                 </div>
                             </div>
 
-                            <span class="role-badge">
-                                <?php echo htmlspecialchars($member['userRole'] ?? ''); ?>
-                            </span>
+                             <span class="role-badge">
+                                 <?php echo htmlspecialchars($member['membershipRole'] ?? ''); ?>
+                             </span>
 
                         </div>
 

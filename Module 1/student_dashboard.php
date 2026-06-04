@@ -1,16 +1,15 @@
 <?php
 session_start();
 
+// Reset role to Student when in student mode
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'Committee') {
+    $_SESSION['role'] = 'Student';
+}
+
 $_SESSION['current_module'] = 'student';
 
 // Security Check
-if (
-    !isset($_SESSION['user_id']) ||
-    (
-        $_SESSION['role'] !== 'Student' &&
-        strpos($_SESSION['role'], 'Committee') === false
-    )
-) {
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Student') {
     header("Location: index.php");
     exit();
 }

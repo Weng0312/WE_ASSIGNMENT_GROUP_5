@@ -133,14 +133,17 @@ $users = $stmt->fetchAll();
 
                                             <td>
                                                 <span class="badge bg-light text-dark border">
-                                                    <?php echo htmlspecialchars($u['userRole']); ?>
+                                                    <?php 
+                                                    $isCommitteeUser = ($u['userRole'] === 'Student' && !empty($u['membershipRole']) && $u['membershipRole'] !== 'Member');
+                                                    echo $isCommitteeUser ? 'Student (Committee)' : htmlspecialchars($u['userRole']); 
+                                                    ?>
                                                 </span>
                                             </td>
 
                                             <td>
                                                 <?php
-                                                if ($u['userRole'] === 'Committee') {
-                                                    echo htmlspecialchars($u['membershipRole'] ?? '-');
+                                                if ($isCommitteeUser) {
+                                                    echo htmlspecialchars($u['membershipRole']);
                                                 } else {
                                                     echo '-';
                                                 }
