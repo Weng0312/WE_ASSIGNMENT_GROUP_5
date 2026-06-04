@@ -38,7 +38,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Student') {
         <div id="content">
             <div class="container-fluid">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="fw-bold">Student Dashboard</h2>
+                    <h1 class="h2 fw-bold mb-0">Student Dashboard</h1>
                     <span class="text-muted"><?php echo date('l, jS F Y'); ?></span>
                 </div>
 

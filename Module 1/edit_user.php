@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="card shadow-sm border-0">
 
                         <div class="card-header bg-white py-3">
-                            <h5 class="mb-0 fw-bold">Edit User Details</h5>
+                            <h1 class="h5 mb-0 fw-bold">Edit User Details</h1>
                         </div>
 
                         <div class="card-body p-4">

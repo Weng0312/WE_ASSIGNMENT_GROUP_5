@@ -74,7 +74,7 @@ $users = $stmt->fetchAll();
             <div class="container-fluid">
 
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="fw-bold">Manage User Accounts</h2>
+                    <h1 class="h2 fw-bold mb-0">Manage User Accounts</h1>
 
                     <a href="register.php" class="btn btn-primary">
                         Add New User

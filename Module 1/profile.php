@@ -122,7 +122,7 @@ $display_id = ($user['userRole'] === 'Administrator') ? $user['staffID'] : $user
                     <div class="col-lg-8">
                         <div class="card shadow-sm border-0 mt-4">
                             <div class="card-header bg-white py-3">
-                                <h5 class="mb-0 fw-bold">My Profile Settings</h5>
+                                <h1 class="h5 mb-0 fw-bold">My Profile Settings</h1>
                             </div>
                             <div class="card-body p-4">
                                 <?php if ($message): ?>
