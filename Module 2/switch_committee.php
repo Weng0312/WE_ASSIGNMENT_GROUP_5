@@ -35,7 +35,10 @@ if ($membership) {
         'Vice President',
         'Secretary',
         'Treasurer',
-        'Committee'
+        'Committee',
+        'Committee Member',
+        'Event Coordinator',
+        'Normal Committee'
     ];
 
     if (in_array($membership['membershipRole'], $committeeRoles)) {

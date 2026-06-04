@@ -47,12 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo->beginTransaction();
 
+        $db_role = ($role === 'Committee') ? 'Student' : $role;
         $stmt = $pdo->prepare("
             UPDATE user 
             SET userName = ?, userEmail = ?, userRole = ? 
             WHERE User_ID = ?
         ");
-        $stmt->execute([$name, $email, $role, $id]);
+        $stmt->execute([$name, $email, $db_role, $id]);
 
         if ($role === 'Committee') {
 
@@ -166,18 +167,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <label class="form-label fw-bold">Role</label>
                                     <select name="role" id="role" class="form-select" required>
 
+                                        <?php 
+                                        $isCommittee = ($user['userRole'] === 'Student' && !empty($user['membershipRole']) && $user['membershipRole'] !== 'Member');
+                                        $isStudent = ($user['userRole'] === 'Student' && !$isCommittee);
+                                        ?>
                                         <option value="Administrator"
                                             <?php if ($user['userRole'] == 'Administrator') echo 'selected'; ?>>
                                             Administrator
                                         </option>
 
                                         <option value="Student"
-                                            <?php if ($user['userRole'] == 'Student') echo 'selected'; ?>>
+                                            <?php if ($isStudent) echo 'selected'; ?>>
                                             Student
                                         </option>
 
                                         <option value="Committee"
-                                            <?php if ($user['userRole'] == 'Committee') echo 'selected'; ?>>
+                                            <?php if ($isCommittee) echo 'selected'; ?>>
                                             Committee
                                         </option>
 

@@ -44,10 +44,6 @@ if ($user && password_verify($password, $user['userPassword'])) {
         $isValidRole = true;
     }
 
-    if (strpos($user['userRole'], 'Committee') !== false && $selected_role === 'Student') {
-        $isValidRole = true;
-    }
-
     if ($user['userRole'] === 'Administrator' && $selected_role === 'Administrator') {
         $isValidRole = true;
     }
