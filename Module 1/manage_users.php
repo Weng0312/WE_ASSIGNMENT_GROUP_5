@@ -74,7 +74,7 @@ $users = $stmt->fetchAll();
             <div class="container-fluid">
 
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="fw-bold">Manage User Accounts</h2>
+                    <h1 class="h2 fw-bold mb-0">Manage User Accounts</h1>
 
                     <a href="register.php" class="btn btn-primary">
                         Add New User
@@ -133,14 +133,17 @@ $users = $stmt->fetchAll();
 
                                             <td>
                                                 <span class="badge bg-light text-dark border">
-                                                    <?php echo htmlspecialchars($u['userRole']); ?>
+                                                    <?php 
+                                                    $isCommitteeUser = ($u['userRole'] === 'Student' && !empty($u['membershipRole']) && $u['membershipRole'] !== 'Member');
+                                                    echo $isCommitteeUser ? 'Student (Committee)' : htmlspecialchars($u['userRole']); 
+                                                    ?>
                                                 </span>
                                             </td>
 
                                             <td>
                                                 <?php
-                                                if ($u['userRole'] === 'Committee') {
-                                                    echo htmlspecialchars($u['membershipRole'] ?? '-');
+                                                if ($isCommitteeUser) {
+                                                    echo htmlspecialchars($u['membershipRole']);
                                                 } else {
                                                     echo '-';
                                                 }

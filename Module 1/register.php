@@ -32,8 +32,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $pdo->beginTransaction();
 
         // 1. Insert into user table
+        $db_role = ($role === 'Committee') ? 'Student' : $role;
         $stmt = $pdo->prepare("INSERT INTO user (userName, userPassword, userEmail, userRole) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$name, $password, $email, $role]);
+        $stmt->execute([$name, $password, $email, $db_role]);
         $user_id = $pdo->lastInsertId();
 
         // 2. Insert into specialization tables
@@ -104,11 +105,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             ");
             $stmt->execute([$user_id, $studentID, $programme, $studyYear]);
 
-            // 3. If Committee, also update the role name and join club
+            // 3. If Committee, join club
             if (strpos($role, 'Committee') !== false && !empty($club_id)) {
-                $final_role = "Committee (" . $committee_pos . ")";
-                $pdo->prepare("UPDATE user SET userRole = ? WHERE User_ID = ?")->execute([$final_role, $user_id]);
-
                 $stmt = $pdo->prepare("INSERT INTO club_membership (Club_ID, User_ID, membershipRole, joinDate, membershipStatus) VALUES (?, ?, ?, CURDATE(), 'Active')");
                 $stmt->execute([$club_id, $user_id, $committee_pos]);
             }
@@ -173,7 +171,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <div class="col-lg-7">
                         <div class="card shadow-sm border-0">
                             <div class="card-header bg-white py-3">
-                                <h5 class="mb-0 fw-bold">Register New System User</h5>
+                                <h1 class="h5 mb-0 fw-bold">Register New System User</h1>
                             </div>
 
                             <div class="card-body p-4">
