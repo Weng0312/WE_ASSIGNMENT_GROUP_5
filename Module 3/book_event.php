@@ -15,6 +15,9 @@ $messageType = '';
 // Fetch all available events for the selection dropdown
 $events = $pdo->query("SELECT Event_ID, eventTitle, eventVenue, eventDate FROM event")->fetchAll();
 
+// Capture event_id from URL GET parameter if available (for auto-selecting)
+$selected_event_id = isset($_GET['event_id']) ? intval($_GET['event_id']) : '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $event_id = $_POST['event_id'];
     $user_id = $_SESSION['user_id'];
@@ -22,12 +25,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reg_date = date('Y-m-d');
 
     try {
-        // Secure PDO insert execution matching your schema parameters
-        $stmt = $pdo->prepare("INSERT INTO event_registration (eventRegistrationStatus, eventRegistrationDate, User_ID, Event_ID) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$reg_status, $reg_date, $user_id, $event_id]);
+        // STEP 1: Check if a registration entry already exists for this user and event
+        $checkStmt = $pdo->prepare("SELECT EventRegistration_ID, eventRegistrationStatus FROM event_registration WHERE User_ID = ? AND Event_ID = ?");
+        $checkStmt->execute([$user_id, $event_id]);
+        $existingReg = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-        $message = "Successfully registered for the event!";
-        $messageType = "success";
+        if ($existingReg) {
+            // STEP 2: If it exists but is Cancelled, update it back to Pending
+            if (strcasecmp($existingReg['eventRegistrationStatus'], 'Cancelled') === 0) {
+                $updateStmt = $pdo->prepare("UPDATE event_registration SET eventRegistrationStatus = ?, eventRegistrationDate = ? WHERE EventRegistration_ID = ?");
+                $updateStmt->execute([$reg_status, $reg_date, $existingReg['EventRegistration_ID']]);
+                
+                $message = "Successfully re-registered for the event!";
+                $messageType = "success";
+            } else {
+                // If status is already Pending or Approved, block duplicate submission
+                $message = "You are already registered for this event (Status: " . $existingReg['eventRegistrationStatus'] . ").";
+                $messageType = "warning";
+            }
+        } else {
+            // STEP 3: If no record exists, insert a brand new row safely
+            $stmt = $pdo->prepare("INSERT INTO event_registration (eventRegistrationStatus, eventRegistrationDate, User_ID, Event_ID) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$reg_status, $reg_date, $user_id, $event_id]);
+
+            $message = "Successfully registered for the event!";
+            $messageType = "success";
+        }
     } catch (Exception $e) {
         $message = "Error registering for event: " . $e->getMessage();
         $messageType = "danger";
@@ -68,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <select name="event_id" class="form-select" required>
                                             <option value="">-- Select Event --</option>
                                             <?php foreach ($events as $ev): ?>
-                                                <option value="<?php echo $ev['Event_ID']; ?>">
+                                                <option value="<?php echo $ev['Event_ID']; ?>" <?php echo ($selected_event_id == $ev['Event_ID']) ? 'selected' : ''; ?>>
                                                     <?php echo htmlspecialchars($ev['eventTitle']); ?> (<?php echo $ev['eventVenue']; ?> - <?php echo date('d M Y', strtotime($ev['eventDate'])); ?>)
                                                 </option>
                                             <?php endforeach; ?>
@@ -76,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                     <div class="d-grid gap-2">
                                         <button type="submit" class="btn btn-success fw-bold py-2">Submit Registration</button>
-                                        <a href="view_my_registrations.php" class="btn btn-outline-secondary">View My Bookings</a>
+                                        <a href="my_event_registration.php" class="btn btn-outline-secondary">View My Bookings</a>
                                     </div>
                                 </form>
                             </div>
