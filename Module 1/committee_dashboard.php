@@ -32,7 +32,7 @@ if (!isset($_SESSION['user_id']) || strpos($_SESSION['role'], 'Committee') === f
 
             <div class="container-fluid">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 class="h2 fw-bold mb-0">Committee Panel</h1>
+                    <h1 class="h2 fw-bold mb-0">Committee Dashboard</h1>
                     <span class="text-muted"><?php echo date('l, jS F Y'); ?></span>
                 </div>
 
