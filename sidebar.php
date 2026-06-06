@@ -83,6 +83,12 @@ $reportPages = [
                     <i class="bi bi-speedometer2 me-2"></i> Dashboard
                 </a>
             </li>
+            
+            <li class="<?= ($currentPage == 'club_members.php') ? 'active' : ''; ?>">
+                <a href="<?= $BASE ?>/Module 2/club_members.php">
+                    <i class="bi bi-person-lines-fill me-2"></i> Club Members
+                </a>
+            </li>
 
             <li class="<?= ($currentPage == 'event_management.php' || $currentPage == 'create_event.php' || $currentPage == 'edit_event.php' || $currentPage == 'view_event.php') ? 'active' : ''; ?>">
                 <a href="<?= $BASE ?>/Module 3/event_management.php">

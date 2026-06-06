@@ -33,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // 1. Insert into user table
         $db_role = ($role === 'Committee') ? 'Student' : $role;
-        $stmt = $pdo->prepare("INSERT INTO user (userName, userPassword, userEmail, userRole) VALUES (?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO user (userName, userPassword, userEmail, userRole, userStatus) VALUES (?, ?, ?, ?, 'Active')");
         $stmt->execute([$name, $password, $email, $db_role]);
         $user_id = $pdo->lastInsertId();
 

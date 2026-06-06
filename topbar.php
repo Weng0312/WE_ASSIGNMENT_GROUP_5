@@ -38,7 +38,10 @@ if ($currentMode === 'committee' && !empty($membershipRole)) {
 
 <div class="topbar">
     <div class="topbar-left">
-        <img src="<?= $BASE ?>/Images/logo.png" alt="Logo" class="topbar-logo">
+        <a href="https://fk.umpsa.edu.my/" class="topbar-logo-link" target="_blank">
+            <img src="<?= $BASE ?>/Images/logo.png" alt="Logo" class="topbar-logo">
+        </a>
+        
         <h5>FK STUDENT CLUB & EVENT MANAGEMENT SYSTEM</h5>
     </div>
 
