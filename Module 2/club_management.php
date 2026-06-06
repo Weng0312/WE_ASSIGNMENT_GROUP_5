@@ -49,6 +49,7 @@ if (isset($_GET['action'])) {
 
     try {
         if ($action === 'list') {
+            // Admin list queries all data (Inactive included for toggling purposes)
             $sql = "SELECT c.*, COUNT(m.Membership_ID) as total_members 
                     FROM club c 
                     LEFT JOIN club_membership m ON c.Club_ID = m.Club_ID 
@@ -61,41 +62,15 @@ if (isset($_GET['action'])) {
             foreach ($rawClubs as $row) {
                 $normalizedClubs[] = [
                     'Club_ID' => $row['Club_ID'] ?? null,
-                    'clubName' => $row['clubName'] ?? $row['club_name'] ?? $row['ClubName'] ?? 'Unnamed Club',
-                    'clubAdvisorName' => $row['clubAdvisorName'] ?? $row['club_advisor_name'] ?? $row['ClubAdvisorName'] ?? 'No Advisor',
-                    'clubDescription' => $row['clubDescription'] ?? $row['club_description'] ?? $row['ClubDescription'] ?? '',
-                    'clubStatus' => $row['clubStatus'] ?? $row['club_status'] ?? $row['ClubStatus'] ?? 'Active',
+                    'clubName' => $row['clubName'] ?? 'Unnamed Club',
+                    'clubAdvisorName' => $row['clubAdvisorName'] ?? 'No Advisor',
+                    'clubDescription' => $row['clubDescription'] ?? '',
+                    'clubStatus' => $row['clubStatus'] ?? 'Active',
                     'total_members' => $row['total_members'] ?? 0
                 ];
             }
 
             echo json_api_respond(true, $normalizedClubs);
-            exit;
-        }
-
-        if ($action === 'view' && isset($_GET['id'])) {
-            $sql = "SELECT c.*, COUNT(m.Membership_ID) as total_members 
-                    FROM club c 
-                    LEFT JOIN club_membership m ON c.Club_ID = m.Club_ID 
-                    WHERE c.Club_ID = ?
-                    GROUP BY c.Club_ID";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$_GET['id']]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($row) {
-                $normalized = [
-                    'Club_ID' => $row['Club_ID'] ?? null,
-                    'clubName' => $row['clubName'] ?? $row['club_name'] ?? $row['ClubName'] ?? 'Unnamed Club',
-                    'clubAdvisorName' => $row['clubAdvisorName'] ?? $row['club_advisor_name'] ?? $row['ClubAdvisorName'] ?? 'No Advisor',
-                    'clubDescription' => $row['clubDescription'] ?? $row['club_description'] ?? $row['ClubDescription'] ?? '',
-                    'clubStatus' => $row['clubStatus'] ?? $row['club_status'] ?? $row['ClubStatus'] ?? 'Active',
-                    'total_members' => $row['total_members'] ?? 0
-                ];
-                echo json_api_respond(true, $normalized);
-            } else {
-                echo json_api_respond(false, null, 'Club record could not be tracked.');
-            }
             exit;
         }
 
@@ -111,21 +86,13 @@ if (isset($_GET['action'])) {
                 exit;
             }
 
-            $check = $pdo->query("SELECT * FROM club LIMIT 1");
-            $sample = $check->fetch(PDO::FETCH_ASSOC);
-            
-            $colName = isset($sample['club_name']) ? 'club_name' : (isset($sample['ClubName']) ? 'ClubName' : 'clubName');
-            $colDesc = isset($sample['club_description']) ? 'club_description' : (isset($sample['ClubDescription']) ? 'ClubDescription' : 'clubDescription');
-            $colAdv  = isset($sample['club_advisor_name']) ? 'club_advisor_name' : (isset($sample['ClubAdvisorName']) ? 'ClubAdvisorName' : 'clubAdvisorName');
-            $colStat = isset($sample['club_status']) ? 'club_status' : (isset($sample['ClubStatus']) ? 'ClubStatus' : 'clubStatus');
-
             if ($club_id) {
-                $sql = "UPDATE club SET $colName = ?, $colDesc = ?, $colAdv = ?, $colStat = ? WHERE Club_ID = ?";
+                $sql = "UPDATE club SET clubName = ?, clubDescription = ?, clubAdvisorName = ?, clubStatus = ? WHERE Club_ID = ?";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$name, $description, $advisor, $status, $club_id]);
                 echo json_api_respond(true, null, 'Club properties successfully updated.');
             } else {
-                $sql = "INSERT INTO club ($colName, $colDesc, $colAdv, $colStat) VALUES (?, ?, ?, ?)";
+                $sql = "INSERT INTO club (clubName, clubDescription, clubAdvisorName, clubStatus) VALUES (?, ?, ?, ?)";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$name, $description, $advisor, $status]);
                 echo json_api_respond(true, null, 'New club registered successfully.');
@@ -147,12 +114,7 @@ if (isset($_GET['action'])) {
         if ($action === 'toggle_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_POST['Club_ID']) && isset($_POST['current_status'])) {
                 $newStatus = ($_POST['current_status'] === 'Active') ? 'Inactive' : 'Active';
-                
-                $check = $pdo->query("SELECT * FROM club LIMIT 1");
-                $sample = $check->fetch(PDO::FETCH_ASSOC);
-                $colStat = isset($sample['club_status']) ? 'club_status' : (isset($sample['ClubStatus']) ? 'ClubStatus' : 'clubStatus');
-
-                $stmt = $pdo->prepare("UPDATE club SET $colStat = ? WHERE Club_ID = ?");
+                $stmt = $pdo->prepare("UPDATE club SET clubStatus = ? WHERE Club_ID = ?");
                 $stmt->execute([$newStatus, $_POST['Club_ID']]);
                 echo json_api_respond(true, ['new_status' => $newStatus], 'Status updated successfully.');
             } else {
@@ -166,10 +128,231 @@ if (isset($_GET['action'])) {
         exit;
     }
 }
+
+// ==========================================
+// VIEW PAGE SPLIT ENGINE (REFACTORED CLEAN DESIGN)
+// ==========================================
+if (isset($_GET['view_page'])) {
+    $clubId = intval($_GET['view_page']);
+    
+    // Fetch fundamental details
+    $sql = "SELECT c.*, COUNT(m.Membership_ID) as total_members 
+            FROM club c 
+            LEFT JOIN club_membership m ON c.Club_ID = m.Club_ID 
+            WHERE c.Club_ID = ?
+            GROUP BY c.Club_ID";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$clubId]);
+    $club = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$club) {
+        die("Club record could not be tracked inside organizational scope.");
+    }
+
+    $clubName = $club['clubName'] ?? 'Unnamed Club';
+    $clubAdvisor = $club['clubAdvisorName'] ?? 'No Advisor';
+    $clubDesc = $club['clubDescription'] ?? 'No description added yet.';
+    $clubStatus = $club['clubStatus'] ?? 'Active';
+
+    // Filter and prioritize positions based on standardized ranking structure
+    $stmtComm = $pdo->prepare("SELECT m.membershipRole, u.userName, u.userEmail 
+                              FROM club_membership m 
+                              JOIN user u ON m.User_ID = u.User_ID 
+                              WHERE m.Club_ID = ? 
+                              AND m.membershipRole IN ('President', 'Vice President', 'Secretary', 'Treasurer', 'Event Coordinator', 'Normal Committee')
+                              ORDER BY FIELD(m.membershipRole, 'President', 'Vice President', 'Secretary', 'Treasurer', 'Event Coordinator', 'Normal Committee') ASC");
+    $stmtComm->execute([$clubId]);
+    $committees = $stmtComm->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get Standard Members (where role is strictly 'Member')
+    $stmtMem = $pdo->prepare("SELECT m.Membership_ID, m.joinDate, u.userName, u.userEmail 
+                              FROM club_membership m 
+                              JOIN user u ON m.User_ID = u.User_ID 
+                              WHERE m.Club_ID = ? AND m.membershipRole = 'Member'
+                              ORDER BY m.joinDate DESC");
+    $stmtMem->execute([$clubId]);
+    $memberships = $stmtMem->fetchAll(PDO::FETCH_ASSOC);
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title><?php echo htmlspecialchars($clubName); ?> - Profile Details</title>
+        <link rel="stylesheet" href="../STYLE/CSS/Module1/adminDashboard_CSS.css">
+        <link href="../STYLE/BOOTSTRAP/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+        <style>
+            body { background-color: #f8f9fa; color: #333333; }
+            .back-btn { font-size: 0.9rem; font-weight: 500; color: #6c757d; text-decoration: none; transition: color 0.2s; }
+            .back-btn:hover { color: #0d6efd; }
+            .profile-header-card { background: #ffffff; border: 1px solid #eef2f5; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+            .club-avatar-placeholder { width: 64px; height: 64px; background-color: #e7f1ff; color: #0d6efd; font-size: 1.5rem; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+            .meta-item-box { border-left: 3px solid #e9ecef; padding-left: 15px; }
+            .meta-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #8c98a5; font-weight: 600; margin-bottom: 2px; }
+            .meta-value { font-size: 0.95rem; font-weight: 600; color: #2d3748; }
+            .clean-section-card { background: #ffffff; border: 1px solid #eef2f5; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 30px; padding: 24px; }
+            .section-title { font-size: 1.1rem; font-weight: 700; color: #1a202c; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+            .table-clean th { font-size: 0.75rem !important; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; color: #8c98a5; background-color: #fafbfc !important; border-bottom: 1px solid #edf2f7 !important; padding: 14px 16px !important; }
+            .table-clean td { padding: 16px !important; font-size: 0.9rem; color: #4a5568; border-bottom: 1px solid #edf2f7 !important; }
+            .table-clean tr:last-child td { border-bottom: none !important; }
+            .badge-active-clean { background-color: #e6f4ea; color: #137333; font-weight: 600; font-size: 0.8rem; padding: 6px 16px; border-radius: 50px; }
+            .badge-inactive-clean { background-color: #fce8e6; color: #c5221f; font-weight: 600; font-size: 0.8rem; padding: 6px 16px; border-radius: 50px; }
+            .role-badge { background-color: #f1f3f5; color: #495057; border: 1px solid #e9ecef; font-weight: 500; font-size: 0.8rem; padding: 4px 10px; border-radius: 6px; }
+        </style>
+    </head>
+    <body>
+        <?php include '../topbar.php'; ?>
+        <div id="wrapper">
+            <?php include '../sidebar.php'; ?>
+            <div id="content">
+                <div class="container py-4" style="max-width: 1000px;">
+                    
+                    <div class="mb-3">
+                        <a href="?" class="back-btn d-inline-flex align-items-center gap-2">
+                            <i class="fa-solid fa-arrow-left"></i> Return to Directory Management
+                        </a>
+                    </div>
+
+                    <div class="profile-header-card p-4 mb-4">
+                        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="club-avatar-placeholder">
+                                    <i class="fa-solid fa-users-gear"></i>
+                                </div>
+                                <div>
+                                    <h2 class="fw-bold text-dark mb-1" style="letter-spacing: -0.5px;"><?php echo htmlspecialchars($clubName); ?></h2>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        <span class="<?php echo $clubStatus === 'Active' ? 'badge-active-clean' : 'badge-inactive-clean'; ?>">
+                                            <?php echo $clubStatus; ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4" style="border-color: #e9ecef;">
+
+                        <div class="row g-4">
+                            <div class="col-sm-4">
+                                <div class="meta-item-box">
+                                    <div class="meta-label">Club Advisor Assigned</div>
+                                    <div class="meta-value text-truncate"><?php echo htmlspecialchars($clubAdvisor); ?></div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="meta-item-box">
+                                    <div class="meta-label">Active Database Roster</div>
+                                    <div class="meta-value"><?php echo (count($committees) + count($memberships)); ?> Total Registered</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="meta-item-box">
+                                    <div class="meta-label">Standard Members</div>
+                                    <div class="meta-value text-success"><?php echo count($memberships); ?> Active</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="clean-section-card">
+                        <div class="section-title">
+                            <i class="fa-solid fa-align-left text-muted" style="font-size: 0.95rem;"></i> Description / About
+                        </div>
+                        <p class="text-secondary mb-0 lh-base" style="white-space: pre-line; font-size: 0.95rem;">
+                            <?php echo htmlspecialchars($clubDesc); ?>
+                        </p>
+                    </div>
+
+                    <div class="clean-section-card p-0 overflow-hidden">
+                        <div class="p-4 pb-2">
+                            <div class="section-title mb-0">
+                                <i class="fa-solid fa-user-shield text-primary" style="font-size: 0.95rem;"></i> Executive Committee Board
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-clean align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%;">Executive Name</th>
+                                        <th style="width: 25%;">Assigned Board Position</th>
+                                        <th style="width: 35%;">Contact Email Address</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($committees)): ?>
+                                        <tr><td colspan="3" class="text-center py-4 text-muted small">No executive committee board members assigned.</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($committees as $comm): ?>
+                                            <tr>
+                                                <td class="fw-bold text-dark"><?php echo htmlspecialchars($comm['userName']); ?></td>
+                                                <td><span class="role-badge"><?php echo htmlspecialchars($comm['membershipRole']); ?></span></td>
+                                                <td class="text-secondary"><?php echo htmlspecialchars($comm['userEmail']); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="clean-section-card p-0 overflow-hidden">
+                        <div class="p-4 pb-2">
+                            <div class="section-title mb-0">
+                                <i class="fa-solid fa-address-book text-success" style="font-size: 0.95rem;"></i> General Club Registry Log
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-clean align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 20%;">Membership ID</th>
+                                        <th style="width: 45%;">Student Name</th>
+                                        <th style="width: 35%;">Enrollment Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($memberships)): ?>
+                                        <tr><td colspan="3" class="text-center py-4 text-muted small">No structural membership logs discovered.</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($memberships as $mem): ?>
+                                            <tr>
+                                                <td class="text-mono text-muted">#<?php echo htmlspecialchars($mem['Membership_ID']); ?></td>
+                                                <td class="fw-semibold text-dark"><?php echo htmlspecialchars($mem['userName']); ?><br><span class="text-muted small" style="font-size:0.75rem; font-weight: normal;"><?php echo htmlspecialchars($mem['userEmail']); ?></span></td>
+                                                <td class="text-secondary"><?php echo htmlspecialchars(date('M d, Y', strtotime($mem['joinDate']))); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <script src="../STYLE/BOOTSTRAP/bootstrap.bundle.min.js"></script>
+    </body>
+    </html>
+    <?php
+    exit; 
+}
+
+// ==========================================
+// MAIN DASHBOARD VIEW (When view_page is NOT set)
+// ==========================================
+$totalClubs = 0; $activeClubs = 0; $inactiveClubs = 0;
+try {
+    $statQuery = $pdo->query("SELECT clubStatus, COUNT(*) as count FROM club GROUP BY clubStatus");
+    while($statRow = $statQuery->fetch(PDO::FETCH_ASSOC)) {
+        if ($statRow['clubStatus'] === 'Active') $activeClubs = intval($statRow['count']);
+        if ($statRow['clubStatus'] === 'Inactive') $inactiveClubs = intval($statRow['count']);
+    }
+    $totalClubs = $activeClubs + $inactiveClubs;
+} catch(Exception $e) {}
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -183,9 +366,9 @@ if (isset($_GET['action'])) {
         .badge-inactive { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         .btn-custom-create { background-color: #0d6efd; color: white; border: none; font-weight: 600; }
         .btn-custom-create:hover { background-color: #0b5ed7; color: white; }
+        .stat-card { border-radius: 8px; border: 1px solid #e3e6f0; }
     </style>
 </head>
-
 <body>
     <?php include '../topbar.php'; ?>
     
@@ -193,14 +376,44 @@ if (isset($_GET['action'])) {
         <?php include '../sidebar.php'; ?>
 
         <div id="content">
-            <div class="container-fluid">
+            <div class="container-fluid py-4">
                 
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h2 class="fw-bold mb-1">Club Management Page</h2>
                         <p class="text-muted mb-0 small">Administrators can view all clubs, create clubs, edit clubs, delete clubs, and activate or deactivate clubs.</p>
                     </div>
-                    <span class="text-muted"><?php echo date('l, jS F Y'); ?></span>
+                    <span class="text-muted small fw-semibold"><?php echo date('l, jS F Y'); ?></span>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card stat-card bg-white p-3 shadow-sm d-flex flex-row align-items-center justify-content-between">
+                            <div>
+                                <span class="text-uppercase text-muted small fw-bold">Total Clubs</span>
+                                <h3 class="fw-bold mb-0 mt-1 text-dark" id="statTotalClubs"><?php echo $totalClubs; ?></h3>
+                            </div>
+                            <div class="fs-2 text-primary opacity-50"><i class="fa-solid fa-building-columns"></i></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card bg-white p-3 shadow-sm d-flex flex-row align-items-center justify-content-between">
+                            <div>
+                                <span class="text-uppercase text-muted small fw-bold">Active Scope</span>
+                                <h3 class="fw-bold mb-0 mt-1 text-success" id="statActiveClubs"><?php echo $activeClubs; ?></h3>
+                            </div>
+                            <div class="fs-2 text-success opacity-50"><i class="fa-solid fa-circle-check"></i></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card bg-white p-3 shadow-sm d-flex flex-row align-items-center justify-content-between">
+                            <div>
+                                <span class="text-uppercase text-muted small fw-bold">Hidden / Inactive</span>
+                                <h3 class="fw-bold mb-0 mt-1 text-danger" id="statInactiveClubs"><?php echo $inactiveClubs; ?></h3>
+                            </div>
+                            <div class="fs-2 text-danger opacity-50"><i class="fa-solid fa-eye-slash"></i></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="row g-3 align-items-center justify-content-between mb-4">
@@ -285,45 +498,6 @@ if (isset($_GET['action'])) {
         </div>
     </div>
 
-    <div class="modal fade" id="clubViewModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow border-0">
-                <div class="modal-header bg-dark text-white py-3">
-                    <h5 class="modal-title fw-bold fs-6">Club Detailed Specifications</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="d-flex align-items-center gap-3 border-bottom pb-3 mb-3">
-                        <div class="bg-light text-primary rounded-3 d-flex align-items-center justify-content-center border" style="width:48px; height:48px; font-size:1.25rem;">
-                            <i class="fa-solid fa-shield-halved"></i>
-                        </div>
-                        <div>
-                            <h4 id="viewClubName" class="fw-bold mb-0 text-dark h5"></h4>
-                            <span id="viewClubStatus" class="badge mt-1 inline-block fs-7 font-bold"></span>
-                        </div>
-                    </div>
-                    <div class="row g-3 small">
-                        <div class="col-12">
-                            <p class="text-muted mb-0 fw-medium">Assigned Club Advisor</p>
-                            <p id="viewClubAdvisor" class="text-dark fw-bold mt-0.5 mb-0"></p>
-                        </div>
-                        <div class="col-12">
-                            <p class="text-muted mb-0 fw-medium">Total Active Members</p>
-                            <p id="viewClubMembers" class="text-dark fw-bold mt-0.5 mb-0"></p>
-                        </div>
-                        <div class="col-12">
-                            <p class="text-muted mb-0 fw-medium">Description</p>
-                            <p id="viewClubDescription" class="text-secondary mt-1 lh-sm style-desc" style="white-space: pre-line;"></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light border-0 py-2">
-                    <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal">Close Panel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="modal fade" id="clubDeleteModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -343,15 +517,25 @@ if (isset($_GET['action'])) {
     </div>
 
     <script>
-        let formModalInstance, viewModalInstance, deleteModalInstance;
+        let formModalInstance, deleteModalInstance;
 
         document.addEventListener("DOMContentLoaded", () => {
             formModalInstance = new bootstrap.Modal(document.getElementById('clubFormModal'));
-            viewModalInstance = new bootstrap.Modal(document.getElementById('clubViewModal'));
             deleteModalInstance = new bootstrap.Modal(document.getElementById('clubDeleteModal'));
-            
             refreshClubViewRecords();
         });
+
+        function updateMetricCounters(clubs) {
+            if(!clubs) return;
+            let active = 0, inactive = 0;
+            clubs.forEach(c => {
+                if(c.clubStatus === 'Active') active++;
+                else inactive++;
+            });
+            document.getElementById('statTotalClubs').innerText = clubs.length;
+            document.getElementById('statActiveClubs').innerText = active;
+            document.getElementById('statInactiveClubs').innerText = inactive;
+        }
 
         function refreshClubViewRecords() {
             fetch('?action=list')
@@ -359,7 +543,14 @@ if (isset($_GET['action'])) {
                     if (!res.ok) throw new Error('HTTP network pipeline payload initialization break.');
                     return res.json();
                 })
-                .then(res => { if(res.success) renderTableStructure(res.data); else alert(res.message); })
+                .then(res => { 
+                    if(res.success) {
+                        renderTableStructure(res.data);
+                        updateMetricCounters(res.data);
+                    } else {
+                        alert(res.message);
+                    }
+                })
                 .catch(err => console.error('Data pipeline error:', err));
         }
 
@@ -370,6 +561,7 @@ if (isset($_GET['action'])) {
                 tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-5 text-center text-muted small">No matching student clubs found.</td></tr>`;
                 return;
             }
+
             clubs.forEach((club, index) => {
                 const isActive = club.clubStatus === 'Active';
                 const row = document.createElement('tr');
@@ -388,7 +580,7 @@ if (isset($_GET['action'])) {
                     </td>
                     <td class="pe-4">
                         <div class="d-flex justify-content-center gap-1">
-                            <button onclick="viewClubEntity(${club.Club_ID})" class="btn btn-sm btn-outline-primary py-1 px-2 fs-8"><i class="fa-regular fa-eye"></i> View</button>
+                            <a href="?view_page=${club.Club_ID}" class="btn btn-sm btn-outline-primary py-1 px-2 fs-8"><i class="fa-regular fa-eye"></i> View</a>
                             <button onclick="openEditModal(${club.Club_ID})" class="btn btn-sm btn-outline-warning py-1 px-2 fs-8"><i class="fa-regular fa-pen-to-square"></i> Edit</button>
                             <button onclick="triggerDeletionConfirmation(${club.Club_ID}, '${escapeJsString(club.clubName)}')" class="btn btn-sm btn-outline-danger py-1 px-2 fs-8"><i class="fa-regular fa-trash-can"></i> Delete</button>
                             <button onclick="toggleClubActiveState(${club.Club_ID}, '${club.clubStatus}')" class="btn btn-sm ${isActive ? 'btn-outline-dark' : 'btn-outline-success'} py-1 px-2 fs-8">${isActive ? 'Deactivate' : 'Activate'}</button>
@@ -408,16 +600,18 @@ if (isset($_GET['action'])) {
         }
 
         function openEditModal(id) {
-            fetch(`?action=view&id=${id}`).then(res => res.json()).then(res => {
+            fetch('?action=list').then(res => res.json()).then(res => {
                 if(res.success) {
-                    const club = res.data;
-                    document.getElementById('modalTitle').innerText = "Edit Club Details";
-                    document.getElementById('formClubId').value = club.Club_ID;
-                    document.getElementById('formClubName').value = club.clubName;
-                    document.getElementById('formClubAdvisor').value = club.clubAdvisorName;
-                    document.getElementById('formClubDescription').value = club.clubDescription;
-                    document.getElementById('formClubStatus').value = club.clubStatus;
-                    formModalInstance.show();
+                    const club = res.data.find(c => c.Club_ID == id);
+                    if(club) {
+                        document.getElementById('modalTitle').innerText = "Edit Club Details";
+                        document.getElementById('formClubId').value = club.Club_ID;
+                        document.getElementById('formClubName').value = club.clubName;
+                        document.getElementById('formClubAdvisor').value = club.clubAdvisorName;
+                        document.getElementById('formClubDescription').value = club.clubDescription;
+                        document.getElementById('formClubStatus').value = club.clubStatus;
+                        formModalInstance.show();
+                    }
                 }
             });
         }
@@ -431,22 +625,6 @@ if (isset($_GET['action'])) {
                     refreshClubViewRecords(); 
                 } else {
                     alert(res.message);
-                }
-            });
-        }
-
-        function viewClubEntity(id) {
-            fetch(`?action=view&id=${id}`).then(res => res.json()).then(res => {
-                if(res.success) {
-                    const club = res.data;
-                    document.getElementById('viewClubName').innerText = club.clubName;
-                    document.getElementById('viewClubAdvisor').innerText = club.clubAdvisorName;
-                    document.getElementById('viewClubMembers').innerText = club.total_members;
-                    document.getElementById('viewClubDescription').innerText = club.clubDescription || 'No description added yet.';
-                    const badge = document.getElementById('viewClubStatus');
-                    badge.innerText = club.clubStatus;
-                    badge.className = `badge mt-1 inline-block fs-7 font-bold ${club.clubStatus === 'Active' ? 'badge-active' : 'badge-inactive'}`;
-                    viewModalInstance.show();
                 }
             });
         }
@@ -486,5 +664,4 @@ if (isset($_GET['action'])) {
     </script>
     <script src="../STYLE/BOOTSTRAP/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

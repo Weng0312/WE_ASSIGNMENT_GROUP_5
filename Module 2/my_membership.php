@@ -17,8 +17,6 @@ if (
     exit();
 }
 
-
-
 $user_id = $_SESSION['user_id'];
 
 // Leave Club Function
@@ -38,18 +36,20 @@ if (isset($_GET['leave'])) {
     exit();
 }
 
-// Fetch Membership Data
+// Fetch Membership Data 
+// FIXED: Added c.clubStatus = 'Active' to automatically hide clubs globally deactivated by the Admin
 $sql = "
     SELECT 
         c.Club_ID,
         c.clubName,
         c.clubDescription,
+        c.clubStatus,
         cm.joinDate,
         cm.membershipStatus,
         cm.membershipRole
     FROM club_membership cm
     JOIN club c ON cm.Club_ID = c.Club_ID
-    WHERE cm.User_ID = ?
+    WHERE cm.User_ID = ? AND c.clubStatus = 'Active'
     ORDER BY cm.joinDate DESC
 ";
 
@@ -153,52 +153,29 @@ $memberships = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         </td>
 
                                         <td>
-
                                             <?php if ($row['membershipStatus'] === 'Active'): ?>
-
-                                                <span class="badge bg-success">
-                                                    Active
-                                                </span>
-
+                                                <span class="badge bg-success">Active</span>
                                             <?php else: ?>
-
-                                                <span class="badge bg-secondary">
-                                                    Inactive
-                                                </span>
-
+                                                <span class="badge bg-secondary">Inactive</span>
                                             <?php endif; ?>
-
                                         </td>
 
                                         <td>
-                                            <?php if (
-                                                $row['membershipRole'] === 'President' ||
-                                                $row['membershipRole'] === 'Vice President' ||
-                                                $row['membershipRole'] === 'Secretary' ||
-                                                $row['membershipRole'] === 'Treasurer' ||
-                                                $row['membershipRole'] === 'Committee'
-                                            ): ?>
-
-                                                <a href="switch_committee.php?club_id=<?php echo $row['Club_ID']; ?>"class="btn btn-primary btn-sm">
-                                                <i class="bi bi-box-arrow-in-right"></i>Enter</a>
-
-                                            <?php else: ?>
-                                                <a href="switch_committee.php?club_id=<?php echo $row['Club_ID']; ?>" class="btn btn-primary btn-sm">
-                                                <i class="bi bi-box-arrow-in-right"></i>Enter</a>
-                                            <?php endif; ?>
-
                                             <?php if ($row['membershipStatus'] === 'Active'): ?>
-
+                                                <a href="switch_committee.php?club_id=<?php echo $row['Club_ID']; ?>" class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-box-arrow-in-right"></i> Enter
+                                                </a>
+                                                
                                                 <a href="my_membership.php?leave=<?php echo $row['Club_ID']; ?>"
                                                    class="btn btn-danger btn-sm"
                                                    onclick="return confirm('Are you sure you want to leave this club?')">
-
-                                                    <i class="bi bi-trash"></i>
-                                                    Leave
+                                                    <i class="bi bi-trash"></i> Leave
                                                 </a>
-
+                                            <?php else: ?>
+                                                <button class="btn btn-secondary btn-sm" disabled>
+                                                    <i class="bi bi-lock-fill"></i> Locked
+                                                </button>
                                             <?php endif; ?>
-
                                         </td>
 
                                     </tr>
@@ -222,7 +199,7 @@ $memberships = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </h4>
 
                             <p class="text-muted">
-                                You have not joined any clubs yet.
+                                You have not joined any clubs yet or your clubs have been deactivated.
                             </p>
 
                         </div>

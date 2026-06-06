@@ -20,6 +20,7 @@ if (
 try {
     $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
+    // FIXED: Appended AND clubStatus = 'Active' to hide globally deactivated clubs
     $query = "SELECT club_ID, clubName, clubDescription
               FROM club
               WHERE 
@@ -27,6 +28,7 @@ try {
                   clubName LIKE :search
                   OR clubDescription LIKE :search
               )
+              AND clubStatus = 'Active'
               ORDER BY club_ID ASC";
 
     $stmt = $pdo->prepare($query);
