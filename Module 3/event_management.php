@@ -15,17 +15,90 @@ if (!isset($_SESSION['user_id']) || strpos($_SESSION['role'], 'Committee') === f
     exit();
 }
 
+// Auto-detect club ID (same as club_members.php and attendance_management.php)
+$myClubID = $_GET['club_id'] ?? $_SESSION['Club_ID'] ?? $_SESSION['club_id'] ?? 0;
+$myClubID = (int) $myClubID;
+
+// If still 0, check committee_club_id
+if ($myClubID == 0 && !empty($_SESSION['committee_club_id'])) {
+    $myClubID = (int) $_SESSION['committee_club_id'];
+}
+// If still 0, auto-detect from user's club membership
+elseif ($myClubID == 0 && isset($_SESSION['user_id'])) {
+    try {
+        $autoDetectQuery = "
+            SELECT Club_ID FROM club_membership 
+            WHERE User_ID = ? AND membershipStatus = 'Active'
+            LIMIT 1
+        ";
+        $autoDetectStmt = $pdo->prepare($autoDetectQuery);
+        $autoDetectStmt->execute([$_SESSION['user_id']]);
+        $autoDetectResult = $autoDetectStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($autoDetectResult) {
+            $myClubID = (int) $autoDetectResult['Club_ID'];
+        }
+    } catch (PDOException $e) {
+        // Silent fail
+    }
+}
+
+$myClubID = (int) $myClubID;
+
+// Helper function
+function e($value)
+{
+    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
+}
+
 try {
-    $stmt = $pdo->query("SELECT COUNT(*) FROM event");
+    // Basic structural scoped data counters
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM event WHERE Club_ID = ?");
+    $stmt->execute([$myClubID]);
     $totalEvents = $stmt->fetchColumn();
 
-    $stmt = $pdo->query("SELECT COUNT(*) FROM event WHERE eventDate > CURDATE()");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM event WHERE eventDate > CURDATE() AND Club_ID = ?");
+    $stmt->execute([$myClubID]);
     $upcomingEvents = $stmt->fetchColumn();
 
-    $stmt = $pdo->query("SELECT COUNT(*) FROM event WHERE eventDate <= CURDATE()");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM event WHERE eventDate <= CURDATE() AND Club_ID = ?");
+    $stmt->execute([$myClubID]);
     $completedEvents = $stmt->fetchColumn();
 
-    $cancelledEvents = 0;
+    // Dynamically tracking explicit registration cancellations across your club's events
+    $stmt = $pdo->prepare("
+        SELECT COUNT(er.EventRegistration_ID) 
+        FROM event_registration er
+        JOIN event e ON er.Event_ID = e.Event_ID
+        WHERE e.Club_ID = ? AND er.eventRegistrationStatus = 'Cancelled'
+    ");
+    $stmt->execute([$myClubID]);
+    $cancelledEvents = $stmt->fetchColumn();
+
+    // --- ANALYTICS EXTRACTIONS ---
+    // 1. Popular Events Data Extraction
+    $popStmt = $pdo->prepare("
+        SELECT e.eventTitle, COUNT(er.EventRegistration_ID) as reg_count 
+        FROM event e 
+        LEFT JOIN event_registration er ON e.Event_ID = er.Event_ID AND er.eventRegistrationStatus != 'Cancelled'
+        WHERE e.Club_ID = ? 
+        GROUP BY e.Event_ID 
+        ORDER BY reg_count DESC LIMIT 3
+    ");
+    $popStmt->execute([$myClubID]);
+    $popularEventsList = $popStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // 2. Monthly Trend Metrics Data
+    $trendStmt = $pdo->prepare("
+        SELECT DATE_FORMAT(eventDate, '%b %Y') as month_year, COUNT(Event_ID) as event_count 
+        FROM event 
+        WHERE Club_ID = ? 
+        GROUP BY YEAR(eventDate), MONTH(eventDate) 
+        ORDER BY eventDate ASC
+    ");
+    $trendStmt->execute([$myClubID]);
+    $monthlyTrends = $trendStmt->fetchAll(PDO::FETCH_ASSOC);
+
 } catch (PDOException $e) {
     die("Database summary aggregation error: " . $e->getMessage());
 }
@@ -33,9 +106,34 @@ try {
 $statusFilter = $_GET['status'] ?? 'All Statuses';
 
 try {
-    $query = "SELECT * FROM event ORDER BY eventDate DESC";
-    $stmt = $pdo->query($query);
-    $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Scoped main event loop array structure to club boundary
+    $query = "SELECT * FROM event WHERE Club_ID = ? ORDER BY eventDate DESC";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$myClubID]);
+    $rawEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Filter events based on status ahead of time to keep dashboard entry numbers completely precise
+    $events = [];
+    $todayStr = date('Y-m-d'); // Current date string (e.g., '2026-06-04')
+
+    foreach ($rawEvents as $event) {
+        // Strip out any time components from the database column value
+        $eventDateStr = date('Y-m-d', strtotime($event['eventDate']));
+
+        if ($eventDateStr === $todayStr) {
+            $eventStatus = 'Ongoing';
+        } elseif ($eventDateStr > $todayStr) {
+            $eventStatus = 'Upcoming';
+        } else {
+            $eventStatus = 'Completed';
+        }
+
+        if ($statusFilter === 'All Statuses' || $statusFilter === $eventStatus) {
+            $event['computedStatus'] = $eventStatus;
+            $events[] = $event;
+        }
+    }
+    
 } catch (PDOException $e) {
     die("Error fetching events list: " . $e->getMessage());
 }
@@ -60,6 +158,7 @@ try {
         #content {
             padding: 2rem;
             width: 100%;
+            margin-top: 70px;
         }
 
         .metric-card {
@@ -112,6 +211,45 @@ try {
             padding: 0.35em 0.8em;
             border-radius: 50rem;
         }
+
+        .badge-pending {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.35em 0.8em;
+            border-radius: 50rem;
+            background-color: #fef3c7;
+            color: #92400e;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pending-count {
+            display: inline-block;
+            background-color: #fbbf24;
+            color: #ffffff;
+            padding: 0.25rem 0.6rem;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 0.75rem;
+            min-width: 1.5rem;
+            text-align: center;
+        }
+
+        /* Clean optimization rule sets for clean PDF outputs via window.print() */
+        @media print {
+            #sidebar, .topbar, nav, .btn, .d-flex.align-items-center.gap-2, .p-4.border-b {
+                display: none !important;
+            }
+            #content {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body {
+                background-color: #ffffff;
+            }
+        }
     </style>
 </head>
 
@@ -121,37 +259,29 @@ try {
     <div id="wrapper" class="d-flex">
         <?php include '../sidebar.php'; ?>
 
-        <div id="content" style="margin-top: 10px;">
+        <div id="content">
             <div class="container-fluid">
 
                 <?php if (!empty($successMessage)): ?>
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                         <i class="bi bi-check-circle-fill me-2"></i>
-                        <?php echo htmlspecialchars($successMessage); ?>
-
-                        <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="alert">
-                        </button>
+                        <?php echo e($successMessage); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
 
                 <?php if (!empty($errorMessage)): ?>
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        <?php echo htmlspecialchars($errorMessage); ?>
-
-                        <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="alert">
-                        </button>
+                        <?php echo e($errorMessage); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
 
                 <div class="d-flex justify-content-between align-items-end mb-4">
                     <div>
                         <h2 class="fw-bold mb-1" style="font-size: 32px; letter-spacing: -0.02em;">Event Management</h2>
-                        <p class="text-muted mb-0">Coordinate, track, and manage all student club activities.</p>
+                        <p class="text-muted mb-0">Coordinate, track, and manage all student club activities. (Club ID: <?php echo e($myClubID); ?>)</p>
                     </div>
 
                     <a href="create_event.php" class="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 fw-bold shadow-sm" style="background-color: #003ca0; border: none; border-radius: 0.5rem;">
@@ -202,8 +332,44 @@ try {
                                 <i class="bi bi-x-circle"></i>
                             </div>
                             <div>
-                                <small class="text-muted d-block fw-medium">Cancelled</small>
+                                <small class="text-muted d-block fw-medium">Cancelled Regs</small>
                                 <span class="h3 fw-bold mb-0"><?php echo $cancelledEvents; ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="card border shadow-sm p-4 h-100" style="border-radius: 0.75rem; background: #ffffff;">
+                            <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-star-fill text-warning me-2"></i> Most Popular Events</h5>
+                            <ul class="list-group list-group-flush">
+                                <?php foreach($popularEventsList as $popEvent): ?>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
+                                        <span class="text-secondary fw-medium"><?php echo e($popEvent['eventTitle']); ?></span>
+                                        <span class="badge rounded-pill bg-primary"><?php echo $popEvent['reg_count']; ?> attendees</span>
+                                    </li>
+                                <?php endforeach; ?>
+                                <?php if(empty($popularEventsList)): ?>
+                                    <p class="text-muted small">No registration analytics data available.</p>
+                                <?php endif; ?>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card border shadow-sm p-4 h-100" style="border-radius: 0.75rem; background: #ffffff;">
+                            <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-graph-up-arrow text-success me-2"></i> Monthly Event Trends</h5>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <?php foreach($monthlyTrends as $trend): ?>
+                                    <div class="border rounded p-2 text-center bg-light" style="min-width: 90px;">
+                                        <small class="text-muted d-block font-monospace"><?php echo $trend['month_year']; ?></small>
+                                        <strong class="fs-5 text-dark"><?php echo $trend['event_count']; ?></strong> <small class="text-muted">events</small>
+                                    </div>
+                                <?php endforeach; ?>
+                                <?php if(empty($monthlyTrends)): ?>
+                                    <p class="text-muted small">No monthly trends available yet.</p>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -211,12 +377,11 @@ try {
 
                 <div class="table-container mb-4">
                     <div class="p-4 border-b d-flex justify-content-between align-items-center flex-wrap gap-3">
-                        <h4 class="fw-bold mb-0" style="font-size: 20px;">Event List</h4>
+                        <h4 class="fw-bold mb-0" style="font-size: 20px;">Event List (<?php echo e($statusFilter); ?>)</h4>
 
                         <div class="d-flex align-items-center gap-2">
                             <div class="d-flex align-items-center bg-light px-3 py-1 rounded border">
                                 <i class="bi bi-filter text-muted me-2"></i>
-
                                 <select class="form-select form-select-sm border-0 bg-transparent shadow-none p-0 pe-4" onchange="location = this.value;">
                                     <option value="?status=All Statuses" <?php echo $statusFilter === 'All Statuses' ? 'selected' : ''; ?>>All Statuses</option>
                                     <option value="?status=Upcoming" <?php echo $statusFilter === 'Upcoming' ? 'selected' : ''; ?>>Upcoming</option>
@@ -241,6 +406,7 @@ try {
                                     <th scope="col">Venue</th>
                                     <th scope="col" class="text-center">Capacity</th>
                                     <th scope="col" class="text-center">Registered</th>
+                                    <th scope="col" class="text-center">Pending</th>
                                     <th scope="col">Status</th>
                                     <th scope="col" class="text-end" style="width: 160px;">Actions</th>
                                 </tr>
@@ -249,70 +415,55 @@ try {
                             <tbody>
                                 <?php if (empty($events)): ?>
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted py-5">
+                                        <td colspan="9" class="text-center text-muted py-5">
                                             <i class="bi bi-calendar-x display-6 d-block mb-2"></i>
-                                            No event records found in the database system.
+                                            No event records found matching your status filter.
                                         </td>
                                     </tr>
                                 <?php else: ?>
                                     <?php
                                     $counter = 1;
-
                                     foreach ($events as $event):
-
-                                        $eventTimestamp = strtotime($event['eventDate']);
-                                        $currentTimestamp = strtotime(date('Y-m-d'));
-
-                                        if ($eventTimestamp == $currentTimestamp) {
-                                            $eventStatus = 'Ongoing';
+                                        if ($event['computedStatus'] === 'Ongoing') {
                                             $statusBadge = '<span class="badge badge-status bg-success bg-opacity-10 text-success">Ongoing</span>';
-                                        } elseif ($eventTimestamp > $currentTimestamp) {
-                                            $eventStatus = 'Upcoming';
+                                        } elseif ($event['computedStatus'] === 'Upcoming') {
                                             $statusBadge = '<span class="badge badge-status bg-primary bg-opacity-10 text-primary">Upcoming</span>';
                                         } else {
-                                            $eventStatus = 'Completed';
                                             $statusBadge = '<span class="badge badge-status bg-secondary bg-opacity-10 text-secondary">Completed</span>';
                                         }
 
-                                        if ($statusFilter !== 'All Statuses' && $statusFilter !== $eventStatus) {
-                                            continue;
-                                        }
-
-                                        $regStmt = $pdo->prepare("SELECT COUNT(*) FROM event_registration WHERE Event_ID = ?");
+                                        // Get registered count
+                                        $regStmt = $pdo->prepare("SELECT COUNT(*) FROM event_registration WHERE Event_ID = ? AND eventRegistrationStatus != 'Cancelled'");
                                         $regStmt->execute([$event['Event_ID']]);
                                         $registeredCount = $regStmt->fetchColumn();
+
+                                        // Get pending count
+                                        $pendingStmt = $pdo->prepare("SELECT COUNT(*) FROM event_registration WHERE Event_ID = ? AND eventRegistrationStatus = 'Pending'");
+                                        $pendingStmt->execute([$event['Event_ID']]);
+                                        $pendingCount = $pendingStmt->fetchColumn();
 
                                         $capacity = (int)$event['eventMaxParticipant'] > 0 ? (int)$event['eventMaxParticipant'] : 1;
                                         $percentage = min(100, round(($registeredCount / $capacity) * 100));
                                     ?>
                                         <tr>
                                             <td class="text-muted font-monospace"><?php echo sprintf("%02d", $counter++); ?></td>
-
                                             <td>
                                                 <p class="fw-bold mb-0 text-dark">
-                                                    <?php echo htmlspecialchars($event['eventTitle']); ?>
-                                                </p>
-                                                <p class="text-muted mb-0" style="font-size: 12px;">
-                                                    Tech & Engineering Series
+                                                    <?php echo e($event['eventTitle']); ?>
                                                 </p>
                                             </td>
-
                                             <td class="text-nowrap">
                                                 <?php echo date('d M Y', strtotime($event['eventDate'])); ?>
                                             </td>
-
                                             <td>
-                                                <?php echo htmlspecialchars($event['eventVenue']); ?>
+                                                <?php echo e($event['eventVenue']); ?>
                                             </td>
-
                                             <td class="text-center font-monospace">
-                                                <?php echo htmlspecialchars($event['eventMaxParticipant']); ?>
+                                                <?php echo e($event['eventMaxParticipant']); ?>
                                             </td>
-
                                             <td>
                                                 <div class="d-flex align-items-center justify-content-center gap-2">
                                                     <span class="fw-bold"><?php echo $registeredCount; ?></span>
-
                                                     <div class="progress d-none d-md-flex" style="width: 64px; height: 6px; border-radius: 999px;">
                                                         <div class="progress-bar" role="progressbar"
                                                             style="width: <?php echo $percentage; ?>%; background-color: #003ca0;"
@@ -323,9 +474,17 @@ try {
                                                     </div>
                                                 </div>
                                             </td>
-
+                                            <td class="text-center">
+                                                <?php if ($pendingCount > 0): ?>
+                                                    <span class="badge-pending">
+                                                        <i class="bi bi-clock-history"></i>
+                                                        <span class="pending-count"><?php echo $pendingCount; ?></span>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="text-muted" style="font-size: 12px;">—</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td><?php echo $statusBadge; ?></td>
-
                                             <td class="text-end">
                                                 <div class="d-inline-flex gap-1">
                                                     <a href="view_event.php?id=<?php echo $event['Event_ID']; ?>"
@@ -353,14 +512,6 @@ try {
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
-
-                                    <?php if ($counter === 1): ?>
-                                        <tr>
-                                            <td colspan="8" class="text-center text-muted py-5">
-                                                No event found for selected status.
-                                            </td>
-                                        </tr>
-                                    <?php endif; ?>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -368,7 +519,7 @@ try {
 
                     <div class="p-4 border-t d-flex justify-content-between align-items-center">
                         <span class="text-muted" style="font-size: 14px;">
-                            Showing <?php echo max(0, $counter - 1); ?> of <?php echo $totalEvents; ?> entries
+                            Showing <?php echo count($events); ?> of <?php echo $totalEvents; ?> entries
                         </span>
 
                         <nav aria-label="Table Data navigation">
@@ -378,11 +529,9 @@ try {
                                         <i class="bi bi-chevron-left"></i>
                                     </a>
                                 </li>
-
                                 <li class="page-item active">
                                     <a class="page-link border rounded" style="background-color: #003ca0; border-color: #003ca0;" href="#">1</a>
                                 </li>
-
                                 <li class="page-item disabled">
                                     <a class="page-link border rounded" href="#">
                                         <i class="bi bi-chevron-right"></i>
