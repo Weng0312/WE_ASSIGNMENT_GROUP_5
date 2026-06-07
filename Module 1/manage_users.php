@@ -36,6 +36,8 @@ if (isset($_GET['delete'])) {
     }
 }
 
+$search = trim($_GET['search'] ?? '');
+$params = [];
 $sql = "SELECT 
             u.*, 
             s.studentID, 
@@ -44,10 +46,17 @@ $sql = "SELECT
         FROM user u 
         LEFT JOIN student s ON u.User_ID = s.User_ID 
         LEFT JOIN admin a ON u.User_ID = a.User_ID
-        LEFT JOIN club_membership cm ON u.User_ID = cm.User_ID
-        ORDER BY u.User_ID DESC";
+        LEFT JOIN club_membership cm ON u.User_ID = cm.User_ID";
 
-$stmt = $pdo->query($sql);
+if ($search !== '') {
+    $sql .= " WHERE u.userName LIKE ? OR u.userEmail LIKE ? OR s.studentID LIKE ? OR a.staffID LIKE ?";
+    $params = ["%$search%", "%$search%", "%$search%", "%$search%"];
+}
+
+$sql .= " ORDER BY u.User_ID DESC";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $users = $stmt->fetchAll();
 ?>
 
@@ -79,6 +88,26 @@ $users = $stmt->fetchAll();
                     <a href="register.php" class="btn btn-primary">
                         Add New User
                     </a>
+                </div>
+
+                <!-- Search Filter Form -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body py-3">
+                        <form method="GET" class="row g-3 align-items-center">
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                                    <input type="text" name="search" class="form-control" placeholder="Search by name, email, student ID, or staff ID..." value="<?php echo htmlspecialchars($search); ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex gap-2">
+                                <button type="submit" class="btn btn-sm btn-primary">Search</button>
+                                <?php if ($search !== ''): ?>
+                                    <a href="manage_users.php" class="btn btn-sm btn-outline-secondary">Clear</a>
+                                <?php endif; ?>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 <?php if ($message): ?>
