@@ -43,6 +43,21 @@ $roleData = [
     ['userRole' => 'Committee', 'count' => $committeeCount]
 ];
 
+// Query student programme distribution for the programme chart
+$stmt = $pdo->query("SELECT programmeName, COUNT(*) as count FROM student GROUP BY programmeName");
+$programmeData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Query upcoming events with organizing club name (Join table data representation 2)
+$stmt = $pdo->query("
+    SELECT e.eventTitle, e.eventDate, e.eventVenue, c.clubName
+    FROM event e
+    INNER JOIN club c ON e.Club_ID = c.Club_ID
+    WHERE e.eventDate >= CURDATE()
+    ORDER BY e.eventDate ASC
+    LIMIT 3
+");
+$upcomingEventsList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 $stmt = $pdo->query("
     SELECT u.userName, u.userRole, u.userEmail, cm.membershipRole
     FROM user u
@@ -77,6 +92,47 @@ $recentUsers = $stmt->fetchAll();
                     <span class="text-muted"><?php echo date('l, jS F Y'); ?></span>
                 </div>
 
+                <!-- Quick Search Portal (3 Distinct Search Functions) -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="m-0 fw-bold text-dark"><i class="bi bi-search me-2 text-primary"></i>Quick Search Portal</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- User Search -->
+                            <div class="col-md-4">
+                                <form action="manage_users.php" method="GET">
+                                    <label for="userSearchInput" class="form-label small fw-bold text-secondary">Search System Users</label>
+                                    <div class="input-group">
+                                        <input type="text" name="search" id="userSearchInput" class="form-control form-control-sm" placeholder="Search ID or name..." required>
+                                        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i></button>
+                                    </div>
+                                </form>
+                            </div>
+                            <!-- Club Search -->
+                            <div class="col-md-4">
+                                <form action="../Module 2/club_management.php" method="GET">
+                                    <label for="clubSearchInput" class="form-label small fw-bold text-secondary">Search Student Clubs</label>
+                                    <div class="input-group">
+                                        <input type="text" name="search" id="clubSearchInput" class="form-control form-control-sm" placeholder="Search club name..." required>
+                                        <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-search"></i></button>
+                                    </div>
+                                </form>
+                            </div>
+                            <!-- Event Search -->
+                            <div class="col-md-4">
+                                <form action="../Module 3/event_management.php" method="GET">
+                                    <label for="eventSearchInput" class="form-label small fw-bold text-secondary">Search Club Events</label>
+                                    <div class="input-group">
+                                        <input type="text" name="search" id="eventSearchInput" class="form-control form-control-sm" placeholder="Search event title..." required>
+                                        <button type="submit" class="btn btn-sm btn-info text-white"><i class="bi bi-search"></i></button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Summary Cards -->
                 <div class="row mb-4">
                     <div class="col-md-4">
@@ -107,13 +163,32 @@ $recentUsers = $stmt->fetchAll();
 
                 <div class="row">
                     <div class="col-lg-8">
-                        <div class="card shadow-sm border-0 mb-4">
-                            <div class="card-header bg-white py-3">
-                                <h6 class="m-0 fw-bold text-primary">User Role Distribution</h6>
+                        
+                        <div class="row">
+                            <!-- User Role Distribution -->
+                            <div class="col-md-6">
+                                <div class="card shadow-sm border-0 mb-4">
+                                    <div class="card-header bg-white py-3">
+                                        <h6 class="m-0 fw-bold text-primary">User Role Distribution</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div style="height: 250px;">
+                                            <canvas id="roleChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div style="height: 300px;">
-                                    <canvas id="roleChart"></canvas>
+                            <!-- Student Programme Distribution -->
+                            <div class="col-md-6">
+                                <div class="card shadow-sm border-0 mb-4">
+                                    <div class="card-header bg-white py-3">
+                                        <h6 class="m-0 fw-bold text-success">Student Programme Distribution</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div style="height: 250px;">
+                                            <canvas id="programmeChart"></canvas>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -169,6 +244,37 @@ $recentUsers = $stmt->fetchAll();
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Upcoming Events & Organizing Clubs (Join Table Report 2) -->
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header bg-white py-3">
+                                <h6 class="m-0 fw-bold text-success"><i class="bi bi-calendar-event me-2"></i>Upcoming Club Events</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <?php if (!empty($upcomingEventsList)): ?>
+                                    <div class="list-group list-group-flush">
+                                        <?php foreach ($upcomingEventsList as $event): ?>
+                                            <div class="list-group-item p-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <span class="fw-bold small text-primary"><?= htmlspecialchars($event['eventTitle']) ?></span>
+                                                    <span class="badge bg-light text-dark border small"><?= date('d M Y', strtotime($event['eventDate'])) ?></span>
+                                                </div>
+                                                <div class="text-muted small mb-1">
+                                                    <i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($event['eventVenue']) ?>
+                                                </div>
+                                                <div class="text-secondary small font-monospace">
+                                                    <i class="bi bi-shield me-1"></i><?= htmlspecialchars($event['clubName']) ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="p-3 text-center text-muted small">
+                                        No upcoming events scheduled.
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -209,6 +315,44 @@ $recentUsers = $stmt->fetchAll();
                 },
                 plugins: {
                     legend: { display: false }
+                }
+            }
+        });
+
+        // Initialize Student Programme Doughnut Chart
+        const programmeLabels = <?php echo json_encode(array_column($programmeData, 'programmeName')); ?>;
+        const programmeCounts = <?php echo json_encode(array_column($programmeData, 'count')); ?>;
+
+        const ctxProg = document.getElementById('programmeChart').getContext('2d');
+
+        new Chart(ctxProg, {
+            type: 'doughnut',
+            data: {
+                labels: programmeLabels,
+                datasets: [{
+                    data: programmeCounts,
+                    backgroundColor: [
+                        'rgba(78, 115, 223, 0.8)',
+                        'rgba(28, 200, 138, 0.8)',
+                        'rgba(54, 185, 204, 0.8)',
+                        'rgba(246, 194, 62, 0.8)',
+                        'rgba(231, 74, 59, 0.8)'
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: { size: 10 }
+                        }
+                    }
                 }
             }
         });
