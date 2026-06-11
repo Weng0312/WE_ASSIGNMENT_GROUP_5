@@ -12,7 +12,7 @@ $currentMode = $_SESSION['current_module'] ?? 'student';
 $membershipRole = $_SESSION['membershipRole'] ?? '';
 $profilePicture = $_SESSION['userProfilePicture'] ?? '';
 
-$profilePicturePath = $BASE . '/Module 1/uploads/' . $profilePicture;
+$profilePicturePath = $BASE . '/Module_1/uploads/' . $profilePicture;
 
 /*
     Display role in topbar.
@@ -74,7 +74,7 @@ if ($currentMode === 'committee' && !empty($membershipRole)) {
         <div class="dropdown">
             <ul class="dropdown-menu shadow border-0" aria-labelledby="userDropdown">
                 <li>
-                    <a class="dropdown-item py-2" href="<?= $BASE ?>/Module 1/profile.php">
+                    <a class="dropdown-item py-2" href="<?= $BASE ?>/Module_1/profile.php">
                         <i class="bi bi-person me-2 text-gray-400"></i> My Profile
                     </a>
                 </li>
@@ -82,7 +82,7 @@ if ($currentMode === 'committee' && !empty($membershipRole)) {
                 <li><hr class="dropdown-divider"></li>
 
                 <li>
-                    <a class="dropdown-item py-2 text-danger" href="<?= $BASE ?>/Module 1/logout.php">
+                    <a class="dropdown-item py-2 text-danger" href="<?= $BASE ?>/Module_1/logout.php">
                         <i class="bi bi-box-arrow-right me-2"></i> Logout
                     </a>
                 </li>
