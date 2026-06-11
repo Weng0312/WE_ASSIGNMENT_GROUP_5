@@ -347,10 +347,6 @@ select {
     text-align: center;
 }
 
-/* =========================
-   LOCATION CHECK UI
-========================= */
-
 .location-check {
     text-align: center;
     padding: 25px 10px;
@@ -384,11 +380,6 @@ select {
     }
 }
 
-/*
-   Important:
-   Hide attendance form first.
-   JS will show it only after user location is inside UMPSA.
-*/
 .form-box {
     display: none;
 }
@@ -447,10 +438,6 @@ select {
     font-size: 13px;
     line-height: 1.5;
 }
-
-/* =========================
-   RESPONSIVE
-========================= */
 
 @media (max-width: 768px) {
     .container {
