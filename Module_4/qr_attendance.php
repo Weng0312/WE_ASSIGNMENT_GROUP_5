@@ -1,249 +1,231 @@
 <?php
-session_start();
-require_once __DIR__ . '/../db_connect.php';
-require_once __DIR__ . '/attendance_helper.php';
-
-/** @var PDO $pdo */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
-$eventID =
-    $_GET['event_id'] ?? null;
+require_once __DIR__ . '/../db_connect.php';
 
-$message =
-    "";
+/** @var PDO $pdo */
 
-$messageType =
-    "";
+$UMPSA_LAT = 3.5436412;
+$UMPSA_LNG = 103.4288926;
 
-if (!$eventID) {
-    die("Invalid QR Code. Event ID not found.");
+$ALLOWED_RADIUS_METERS = 2000;
+
+$eventID = isset($_GET['event_id']) ? intval($_GET['event_id']) : 0;
+
+$locationSessionKey = "qr_location_verified_event_" . $eventID;
+$isLocationVerified = !empty($_SESSION[$locationSessionKey]);
+
+$message = "";
+$messageType = "";
+$serverLocationBlocked = false;
+
+function clean($value)
+{
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
-/* =========================
-   QR LINK TO SAVE INTO DATABASE
-========================= */
-$qrLink = buildQrAttendanceUrl($eventID);
+function calculateDistanceMeters($lat1, $lng1, $lat2, $lng2)
+{
+    $earthRadius = 6371000;
 
-/* =========================
-   GET EVENT DETAILS
-========================= */
-try {
-    $eventStmt = $pdo->prepare("
-        SELECT 
-            Event_ID,
-            eventTitle,
-            eventDate,
-            eventStartTime,
-            eventEndTime,
-            eventVenue
-        FROM event
-        WHERE Event_ID = ?
-    ");
+    $lat1Rad = deg2rad($lat1);
+    $lat2Rad = deg2rad($lat2);
 
-    $eventStmt->execute([
-        $eventID
-    ]);
+    $deltaLat = deg2rad($lat2 - $lat1);
+    $deltaLng = deg2rad($lng2 - $lng1);
 
-    $event =
-        $eventStmt->fetch(PDO::FETCH_ASSOC);
+    $a = sin($deltaLat / 2) * sin($deltaLat / 2) +
+        cos($lat1Rad) * cos($lat2Rad) *
+        sin($deltaLng / 2) * sin($deltaLng / 2);
 
-    if (!$event) {
-        die("Event not found.");
+    $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+    return $earthRadius * $c;
+}
+
+function getPointValue($attendanceStatus)
+{
+    if ($attendanceStatus === 'Present') {
+        return 10;
     }
 
-} catch (PDOException $e) {
-    die("Error loading event: " . $e->getMessage());
+    if ($attendanceStatus === 'Late') {
+        return 5;
+    }
+
+    if ($attendanceStatus === 'Volunteer') {
+        return 5;
+    }
+
+    if ($attendanceStatus === 'Absent') {
+        return -10;
+    }
+
+    return 0;
 }
 
-/* =========================
-   GET ALL APPROVED STUDENTS
-   FOR QR ATTENDANCE DROPDOWN
-========================= */
-try {
-    $studentListStmt = $pdo->prepare("
-        SELECT
-            s.User_ID,
-            s.studentID,
-            u.userName,
-            ea.Attendance_ID,
-            ea.attendanceStatus
-        FROM event_registration er
-
-        JOIN student s
-            ON er.User_ID = s.User_ID
-
-        JOIN user u
-            ON er.User_ID = u.User_ID
-
-        LEFT JOIN event_attendance ea
-            ON er.EventRegistration_ID =
-               ea.EventRegistrationID
-
-        WHERE er.Event_ID = ?
-          AND er.eventRegistrationStatus = 'Approved'
-
-        ORDER BY s.studentID ASC
-    ");
-
-    $studentListStmt->execute([
-        $eventID
-    ]);
-
-    $students =
-        $studentListStmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (PDOException $e) {
-    $students = [];
+if ($eventID <= 0) {
+    $serverLocationBlocked = true;
+    $message = "Invalid QR code link. Event ID is missing.";
+    $messageType = "error";
 }
 
-/* =========================
-   SUBMIT QR ATTENDANCE
-========================= */
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+$event = null;
+$participants = [];
 
-    $studentID =
-        trim($_POST['studentID'] ?? '');
+if (!$serverLocationBlocked) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                Event_ID,
+                eventTitle,
+                eventDate,
+                eventStartTime,
+                eventEndTime,
+                eventVenue
+            FROM event
+            WHERE Event_ID = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$eventID]);
+        $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (empty($studentID)) {
+        if (!$event) {
+            $serverLocationBlocked = true;
+            $message = "Event not found. Please scan a valid QR code.";
+            $messageType = "error";
+        }
+    } catch (PDOException $e) {
+        $serverLocationBlocked = true;
+        $message = "Error loading event: " . $e->getMessage();
+        $messageType = "error";
+    }
+}
 
-        $message =
-            "Please select your Student ID.";
+if (!$serverLocationBlocked && $event) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                er.EventRegistration_ID,
+                s.studentID,
+                u.userName
+            FROM event_registration er
+            INNER JOIN user u 
+                ON er.User_ID = u.User_ID
+            INNER JOIN student s 
+                ON u.User_ID = s.User_ID
+            WHERE er.Event_ID = ?
+              AND er.eventRegistrationStatus = 'Approved'
+            ORDER BY s.studentID ASC
+        ");
+        $stmt->execute([$eventID]);
+        $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $participants = [];
+    }
+}
 
-        $messageType =
-            "error";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$serverLocationBlocked && $event) {
+    $studentID = trim($_POST['studentID'] ?? '');
+    $attendanceRole = trim($_POST['attendanceRole'] ?? 'Participant');
 
-    } else {
+    $latitude = isset($_POST['latitude']) ? floatval($_POST['latitude']) : 0;
+    $longitude = isset($_POST['longitude']) ? floatval($_POST['longitude']) : 0;
+    $accuracy = isset($_POST['accuracy']) ? floatval($_POST['accuracy']) : 0;
 
-        try {
+    $locationAllowedForSubmit = $isLocationVerified;
 
-            /* =========================
-               CHECK STUDENT EXISTS
-            ========================= */
-            $studentStmt = $pdo->prepare("
-                SELECT 
-                    s.User_ID,
-                    s.studentID,
-                    u.userName
-                FROM student s
+    if (!$locationAllowedForSubmit) {
+        if ($latitude == 0 || $longitude == 0) {
+            $message = "Location not detected. Please allow location access and try again.";
+            $messageType = "error";
+        } else {
+            $distance = calculateDistanceMeters($latitude, $longitude, $UMPSA_LAT, $UMPSA_LNG);
 
-                JOIN user u
-                    ON s.User_ID = u.User_ID
+            $accuracyBonus = min(max($accuracy, 0), 1000);
+            $serverAllowedDistance = $ALLOWED_RADIUS_METERS + $accuracyBonus;
 
-                WHERE s.studentID = ?
-                LIMIT 1
-            ");
-
-            $studentStmt->execute([
-                $studentID
-            ]);
-
-            $student =
-                $studentStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$student) {
-
-                $message =
-                    "Student ID not found.";
-
-                $messageType =
-                    "error";
-
+            if ($distance > $serverAllowedDistance) {
+                $serverLocationBlocked = true;
+                $message = "You are not inside UMPSA Pekan. Attendance form cannot be accessed outside the campus area.";
+                $messageType = "error";
             } else {
+                $_SESSION[$locationSessionKey] = true;
+                $isLocationVerified = true;
+                $locationAllowedForSubmit = true;
+            }
+        }
+    }
 
-                $selectedUserID =
-                    $student['User_ID'];
-
-                /* =========================
-                   CHECK APPROVED REGISTRATION
-                ========================= */
-                $registrationStmt = $pdo->prepare("
-                    SELECT EventRegistration_ID
-                    FROM event_registration
-                    WHERE Event_ID = ?
-                      AND User_ID = ?
-                      AND eventRegistrationStatus = 'Approved'
+    if ($locationAllowedForSubmit && $messageType !== "error") {
+        if ($studentID === '') {
+            $message = "Please enter your Student ID.";
+            $messageType = "error";
+        } else {
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        er.EventRegistration_ID,
+                        u.User_ID,
+                        u.userName,
+                        s.studentID
+                    FROM event_registration er
+                    INNER JOIN user u 
+                        ON er.User_ID = u.User_ID
+                    INNER JOIN student s 
+                        ON u.User_ID = s.User_ID
+                    WHERE s.studentID = ?
+                      AND er.Event_ID = ?
+                      AND er.eventRegistrationStatus = 'Approved'
                     LIMIT 1
                 ");
+                $stmt->execute([$studentID, $eventID]);
+                $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                $registrationStmt->execute([
-                    $eventID,
-                    $selectedUserID
-                ]);
-
-                $registrationRow =
-                    $registrationStmt->fetch(PDO::FETCH_ASSOC);
-
-                if (!$registrationRow) {
-
-                    $message =
-                        "You are not registered or approved for this event.";
-
-                    $messageType =
-                        "error";
-
+                if (!$student) {
+                    $message = "Student ID is not approved for this event.";
+                    $messageType = "error";
                 } else {
+                    $eventRegistrationID = $student['EventRegistration_ID'];
 
-                    $eventRegistrationID =
-                        $registrationRow['EventRegistration_ID'];
-
-                    /* =========================
-                       CHECK DUPLICATE ATTENDANCE
-                    ========================= */
-                    $checkAttendanceStmt = $pdo->prepare("
+                    $stmt = $pdo->prepare("
                         SELECT Attendance_ID
                         FROM event_attendance
                         WHERE EventRegistrationID = ?
                         LIMIT 1
                     ");
-
-                    $checkAttendanceStmt->execute([
-                        $eventRegistrationID
-                    ]);
-
-                    $existingAttendance =
-                        $checkAttendanceStmt->fetch(PDO::FETCH_ASSOC);
+                    $stmt->execute([$eventRegistrationID]);
+                    $existingAttendance = $stmt->fetch(PDO::FETCH_ASSOC);
 
                     if ($existingAttendance) {
-
-                        $message =
-                            "You already submitted attendance for this event.";
-
-                        $messageType =
-                            "error";
-
+                        $message = "Attendance already recorded for this student.";
+                        $messageType = "error";
                     } else {
+                        $checkInTime = date('Y-m-d H:i:s');
 
-                        /* =========================
-                           AUTO STATUS SAME AS
-                           MANUAL ATTENDANCE
-                        ========================= */
-                        $attendanceStatus =
-                            "Present";
+                        $currentDateTime = strtotime(date('Y-m-d H:i:s'));
+                        $eventStartDateTime = strtotime($event['eventDate'] . ' ' . $event['eventStartTime']);
 
-                        $checkInTime =
-                            date('Y-m-d H:i:s');
-
-                        $eventDateTime =
-                            strtotime(
-                                $event['eventDate'] .
-                                ' ' .
-                                $event['eventStartTime']
-                            );
-
-                        $currentDateTime =
-                            time();
-
-                        if ($currentDateTime > $eventDateTime) {
-                            $attendanceStatus =
-                                "Late";
+                        if ($attendanceRole === 'Volunteer') {
+                            $attendanceStatus = 'Volunteer';
+                        } else {
+                            if ($currentDateTime <= $eventStartDateTime) {
+                                $attendanceStatus = 'Present';
+                            } else {
+                                $attendanceStatus = 'Late';
+                            }
                         }
 
-                        /* =========================
-                           INSERT QR ATTENDANCE
-                           BASED ON MANUAL TABLE
-                        ========================= */
-                        $insertAttendance = $pdo->prepare("
+                        $pointsValue = getPointValue($attendanceStatus);
+                        $currentQrUrl = "qr_attendance.php?event_id=" . $eventID;
+
+                        $pdo->beginTransaction();
+
+                        $stmt = $pdo->prepare("
                             INSERT INTO event_attendance
                             (
                                 attendanceType,
@@ -252,264 +234,337 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 checkInTime,
                                 EventRegistrationID
                             )
-                            VALUES (?, ?, ?, ?, ?)
+                            VALUES
+                            (
+                                ?,
+                                ?,
+                                ?,
+                                ?,
+                                ?
+                            )
                         ");
 
-                        $insertAttendance->execute([
+                        $stmt->execute([
                             'QR',
-                            $qrLink,
+                            $currentQrUrl,
                             $attendanceStatus,
                             $checkInTime,
                             $eventRegistrationID
                         ]);
 
-                        $attendanceID =
-                            $pdo->lastInsertId();
+                        $attendanceID = $pdo->lastInsertId();
 
-                        /* =========================
-                           INSERT POINTS
-                           BASED ON MANUAL POINTS
-                        ========================= */
-                        $pointsValue =
-                            getPoints($attendanceStatus);
-
-                        $pointStmt = $pdo->prepare("
+                        $stmt = $pdo->prepare("
                             INSERT INTO points
                             (
                                 pointsValue,
                                 Attendance_ID
                             )
-                            VALUES (?, ?)
+                            VALUES
+                            (
+                                ?,
+                                ?
+                            )
                         ");
 
-                        $pointStmt->execute([
+                        $stmt->execute([
                             $pointsValue,
                             $attendanceID
                         ]);
 
-                        $message =
-                            "Attendance submitted successfully." .
-                            ".";
+                        $pdo->commit();
 
-                        $messageType =
-                            "success";
+                        $message = "Attendance recorded successfully. Status: " . $attendanceStatus;
+                        $messageType = "success";
                     }
                 }
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+
+                $message = "Error saving attendance: " . $e->getMessage();
+                $messageType = "error";
             }
-
-        } catch (PDOException $e) {
-
-            $message =
-                "Database error: " . $e->getMessage();
-
-            $messageType =
-                "error";
         }
     }
+}
+
+$participantMap = [];
+
+foreach ($participants as $participant) {
+    $participantMap[$participant['studentID']] = $participant['userName'];
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
+    <title>QR Attendance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../STYLE/CSS/Module 4/qr_attendance_CSS.css">
     <title>QR Attendance Form</title>
-
-    <link rel="stylesheet" href="../STYLE/CSS/Module_4/qr_attendance_CSS.css">
-
 </head>
 
 <body class="attendance-page">
 
-<div class="attendance-card">
+<?php if ($serverLocationBlocked): ?>
 
-    <h1>QR Attendance Form</h1>
+    <div class="attendance-card error-screen">
+        <div class="error-icon">!</div>
+        <h1>Access Denied</h1>
+        <p><?php echo clean($message); ?></p>
+        <p>Please scan the QR code again inside UMPSA Pekan.</p>
+    </div>
 
-    <p class="subtitle center">
-        Please enter your Student ID to submit attendance.
-    </p>
+<?php else: ?>
 
-    <div class="event-info">
+    <div class="attendance-card">
 
-        <p>
-            <strong>Event:</strong>
-            <?php echo htmlspecialchars($event['eventTitle']); ?>
-        </p>
+        <div id="locationCheck" class="location-check" style="display: block;">
+            <div class="spinner"></div>
+            <h2>Checking Your Location...</h2>
+            <p>Please allow location access to continue attendance.</p>
+            <p class="small-note">
+                The attendance form will only appear when you are inside UMPSA Pekan.
+            </p>
+        </div>
 
-        <p>
-            <strong>Date:</strong>
-            <?php echo htmlspecialchars($event['eventDate']); ?>
-        </p>
+        <div id="locationError" class="error-screen" style="display: none;">
+            <div class="error-icon">!</div>
+            <h1>Access Denied</h1>
+            <p id="locationErrorMessage">
+                You are not inside UMPSA Pekan.
+            </p>
+            <p>The attendance form cannot be accessed outside the campus area.</p>
+            <p class="distance-text" id="distanceText"></p>
+        </div>
 
-        <p>
-            <strong>Start Time:</strong>
-            <?php echo htmlspecialchars($event['eventStartTime']); ?>
-        </p>
+        <div id="attendanceForm" class="form-box" style="display: none;">
+            <div class="header">
+                <h1>QR Attendance</h1>
+                <p>FK Student Club & Event Management System</p>
+            </div>
 
-        <p>
-            <strong>End Time:</strong>
-            <?php echo htmlspecialchars($event['eventEndTime']); ?>
-        </p>
+            <div class="event-info">
+                <h2><?php echo clean($event['eventTitle']); ?></h2>
+                <p><strong>Date:</strong> <?php echo clean($event['eventDate']); ?></p>
+                <p>
+                    <strong>Time:</strong>
+                    <?php echo clean($event['eventStartTime']); ?>
+                    -
+                    <?php echo clean($event['eventEndTime']); ?>
+                </p>
+                <p><strong>Venue:</strong> <?php echo clean($event['eventVenue']); ?></p>
+            </div>
 
-        <p>
-            <strong>Venue:</strong>
-            <?php echo htmlspecialchars($event['eventVenue'] ?? 'N/A'); ?>
-        </p>
+            <?php if ($message !== ''): ?>
+                <div class="message <?php echo clean($messageType); ?>">
+                    <?php echo clean($message); ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" action="qr_attendance.php?event_id=<?php echo clean($eventID); ?>">
+
+                <input type="hidden" name="latitude" id="latitude">
+                <input type="hidden" name="longitude" id="longitude">
+                <input type="hidden" name="accuracy" id="accuracy">
+
+                <div class="form-group">
+                    <label for="studentID">Student ID</label>
+                    <input
+                        type="text"
+                        name="studentID"
+                        id="studentID"
+                        list="studentList"
+                        placeholder="Example: CB24116"
+                        autocomplete="off"
+                        required
+                    >
+
+                    <datalist id="studentList">
+                        <?php foreach ($participants as $participant): ?>
+                            <option value="<?php echo clean($participant['studentID']); ?>">
+                                <?php echo clean($participant['userName']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="studentName">Student Name</label>
+                    <input
+                        type="text"
+                        id="studentName"
+                        class="readonly"
+                        placeholder="Name will appear automatically"
+                        readonly
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="attendanceRole">Attendance Role</label>
+                    <select name="attendanceRole" id="attendanceRole">
+                        <option value="Participant">Participant</option>
+                        <option value="Volunteer">Volunteer</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-submit">Submit Attendance</button>
+
+                <p class="small-note">
+                    Your attendance status will be automatically calculated as Present or Late based on the event start time.
+                </p>
+            </form>
+        </div>
 
     </div>
 
-    <?php if (!empty($message)): ?>
+    <script>
+        const UMPSA_LAT = <?php echo json_encode($UMPSA_LAT); ?>;
+        const UMPSA_LNG = <?php echo json_encode($UMPSA_LNG); ?>;
+        const ALLOWED_RADIUS_METERS = <?php echo json_encode($ALLOWED_RADIUS_METERS); ?>;
+        const LOCATION_ALREADY_VERIFIED = <?php echo json_encode($isLocationVerified); ?>;
 
-        <div class="message <?php echo $messageType; ?>">
-            <?php echo htmlspecialchars($message); ?>
-        </div>
+        const participants = <?php echo json_encode($participantMap); ?>;
 
-    <?php endif; ?>
+        const locationCheck = document.getElementById("locationCheck");
+        const locationError = document.getElementById("locationError");
+        const attendanceForm = document.getElementById("attendanceForm");
+        const locationErrorMessage = document.getElementById("locationErrorMessage");
+        const distanceText = document.getElementById("distanceText");
 
-    <form method="POST">
+        const latitudeInput = document.getElementById("latitude");
+        const longitudeInput = document.getElementById("longitude");
+        const accuracyInput = document.getElementById("accuracy");
 
-        <div class="form-group">
+        const studentIDInput = document.getElementById("studentID");
+        const studentNameInput = document.getElementById("studentName");
 
-            <label for="studentID">
-                Student ID
-            </label>
+        function calculateDistanceMeters(lat1, lng1, lat2, lng2) {
+            const earthRadius = 6371000;
 
-            <input 
-                type="text" 
-                id="studentID" 
-                name="studentID" 
-                placeholder="Type your Student ID"
-                autocomplete="off"
-                required
-            >
+            const lat1Rad = lat1 * Math.PI / 180;
+            const lat2Rad = lat2 * Math.PI / 180;
 
-            <div id="suggestionBox" class="suggestion-box"></div>
+            const deltaLat = (lat2 - lat1) * Math.PI / 180;
+            const deltaLng = (lng2 - lng1) * Math.PI / 180;
 
-        </div>
+            const a =
+                Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+                Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+                Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
 
-        <div class="form-group">
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-            <label for="studentName">
-                Student Name
-            </label>
+            return earthRadius * c;
+        }
 
-            <input 
-                type="text" 
-                id="studentName" 
-                class="readonly"
-                placeholder="Student name will show automatically"
-                readonly
-            >
+        function showAttendanceForm(latitude = "", longitude = "", accuracy = "") {
+            latitudeInput.value = latitude;
+            longitudeInput.value = longitude;
+            accuracyInput.value = accuracy;
 
-        </div>
+            locationCheck.style.display = "none";
+            locationError.style.display = "none";
+            attendanceForm.style.display = "block";
+        }
 
-        <button type="submit" class="btn-submit">
-            Submit Attendance
-        </button>
+        function showLocationError(message, distance = null, accuracy = null, allowedDistance = null) {
+            locationCheck.style.display = "none";
+            attendanceForm.style.display = "none";
+            locationError.style.display = "block";
 
-    </form>
+            locationErrorMessage.textContent = message;
 
-    <p class="note">
-        Your attendance will be marked as Present or Late based on submission time.
-    </p>
+            if (distance !== null) {
+                let text = "Distance from UMPSA point: " + Math.round(distance) + " meters.";
 
-</div>
+                distanceText.textContent = text;
+            } else {
+                distanceText.textContent = "";
+            }
+        }
 
-<script>
-const students =
-    <?php echo json_encode($students); ?>;
+        function checkLocation() {
+            locationCheck.style.display = "block";
+            attendanceForm.style.display = "none";
+            locationError.style.display = "none";
 
-const studentInput =
-    document.getElementById("studentID");
+            if (!navigator.geolocation) {
+                showLocationError("Your browser does not support location access.");
+                return;
+            }
 
-const studentNameInput =
-    document.getElementById("studentName");
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy || 0;
 
-const suggestionBox =
-    document.getElementById("suggestionBox");
+                    const distance = calculateDistanceMeters(
+                        userLat,
+                        userLng,
+                        UMPSA_LAT,
+                        UMPSA_LNG
+                    );
 
-studentInput.addEventListener("keyup", function () {
+                    const accuracyBonus = Math.min(Math.max(accuracy, 0), 1000);
+                    const allowedDistance = ALLOWED_RADIUS_METERS + accuracyBonus;
 
-    const keyword =
-        this.value.trim().toLowerCase();
+                    if (distance <= allowedDistance) {
+                        showAttendanceForm(userLat, userLng, accuracy);
+                    } else {
+                        showLocationError(
+                            "You are not inside UMPSA Pekan.",
+                            distance,
+                            accuracy,
+                            allowedDistance
+                        );
+                    }
+                },
+                function (error) {
+                    let errorMessage = "Location permission denied. Please allow location access to submit attendance.";
 
-    studentNameInput.value = "";
-    suggestionBox.innerHTML = "";
+                    if (error.code === error.TIMEOUT) {
+                        errorMessage = "Location checking timeout. Please refresh the page and allow location access.";
+                    }
 
-    if (keyword === "") {
+                    if (error.code === error.POSITION_UNAVAILABLE) {
+                        errorMessage = "Your current location cannot be detected. Please turn on GPS and try again.";
+                    }
 
-        suggestionBox.style.display = "none";
-        return;
-    }
+                    showLocationError(errorMessage);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 20000,
+                    maximumAge: 60000
+                }
+            );
+        }
 
-    const filtered =
-        students.filter(student =>
-    {
-        const studentID =
-            student.studentID.toLowerCase();
+        studentIDInput.addEventListener("input", function () {
+            const studentID = studentIDInput.value.trim();
 
-        const userName =
-            student.userName.toLowerCase();
+            if (participants[studentID]) {
+                studentNameInput.value = participants[studentID];
+            } else {
+                studentNameInput.value = "";
+            }
+        });
 
-        return studentID.startsWith(keyword)
-            || userName.includes(keyword);
-    });
+        window.addEventListener("load", function () {
+            if (LOCATION_ALREADY_VERIFIED) {
+                showAttendanceForm();
+            } else {
+                checkLocation();
+            }
+        });
+    </script>
 
-    if (filtered.length === 0) {
-
-        suggestionBox.innerHTML =
-            "<div class='suggestion-item'>No student found</div>";
-
-        suggestionBox.style.display = "block";
-        return;
-    }
-
-    filtered.slice(0, 10).forEach(student => {
-
-        const item =
-            document.createElement("div");
-
-        item.className =
-            "suggestion-item";
-
-        /*
-            Dropdown only shows student ID.
-            Name will only show after user chooses ID.
-        */
-        item.textContent =
-            student.studentID;
-
-        item.onclick = function () {
-
-            studentInput.value =
-                student.studentID;
-
-            studentNameInput.value =
-                student.userName;
-
-            suggestionBox.style.display =
-                "none";
-        };
-
-        suggestionBox.appendChild(item);
-    });
-
-    suggestionBox.style.display = "block";
-});
-
-document.addEventListener("click", function (e) {
-
-    if (
-        !studentInput.contains(e.target) &&
-        !suggestionBox.contains(e.target)
-    ) {
-        suggestionBox.style.display = "none";
-    }
-});
-</script>
+<?php endif; ?>
 
 </body>
 </html>
