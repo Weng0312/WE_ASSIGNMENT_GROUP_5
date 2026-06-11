@@ -157,8 +157,7 @@ $display_id = ($userRole === 'Administrator')
         <?php
         if ($_SESSION['current_module'] === 'committee') {
             $dashboardType = 'committee';
-        }
-        elseif ($_SESSION['current_module'] === 'student') {
+        } elseif ($_SESSION['current_module'] === 'student') {
             $dashboardType = 'student';
         }
         ?>
@@ -175,8 +174,8 @@ $display_id = ($userRole === 'Administrator')
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                                 <h1 class="h5 mb-0 fw-bold">My Profile Settings</h1>
 
-                                <button type="button" class="btn btn-outline-primary btn-sm"
-                                    data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#changePasswordModal">
                                     Change Password
                                 </button>
                             </div>
@@ -238,7 +237,8 @@ $display_id = ($userRole === 'Administrator')
                                             <div class="mb-3">
                                                 <label class="form-label fw-bold">Email Address</label>
                                                 <input type="email" name="email" class="form-control"
-                                                    value="<?php echo htmlspecialchars($user['userEmail']); ?>" required>
+                                                    value="<?php echo htmlspecialchars($user['userEmail']); ?>"
+                                                    required>
                                             </div>
 
                                             <!-- Club Memberships Section -->
@@ -252,14 +252,16 @@ $display_id = ($userRole === 'Administrator')
                                                     <?php if (count($memberships) > 0): ?>
                                                         <ul class="list-group list-group-flush">
                                                             <?php foreach ($memberships as $m): ?>
-                                                                <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                                                                <li
+                                                                    class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
                                                                     <div>
                                                                         <span class="fw-bold">
                                                                             <?= htmlspecialchars($m['clubName']) ?>
                                                                         </span>
 
                                                                         <div class="small text-muted">
-                                                                            Role: <?= htmlspecialchars($m['membershipRole'] ?? 'Member') ?>
+                                                                            Role:
+                                                                            <?= htmlspecialchars($m['membershipRole'] ?? 'Member') ?>
                                                                         </div>
                                                                     </div>
 
@@ -295,7 +297,8 @@ $display_id = ($userRole === 'Administrator')
     </div>
 
     <!-- Change Password Modal -->
-    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
 
@@ -327,7 +330,8 @@ $display_id = ($userRole === 'Administrator')
                                 placeholder="Enter new password" required>
 
                             <small id="passwordHelp" class="text-muted">
-                                Password must contain uppercase, lowercase, number, special character, and at least 8 characters.
+                                Password must contain uppercase, lowercase, number, special character, and at least 8
+                                characters.
                             </small>
                         </div>
 
@@ -367,11 +371,11 @@ $display_id = ($userRole === 'Administrator')
                 if (value.length === 0) {
                     passwordHelp.className = "text-muted";
                     passwordHelp.innerHTML = "Password must contain uppercase, lowercase, number, special character, and at least 8 characters.";
-                } 
+                }
                 else if (hasUppercase && hasLowercase && hasNumber && hasSpecial && hasLength) {
                     passwordHelp.className = "text-success";
                     passwordHelp.innerHTML = "Strong password.";
-                } 
+                }
                 else {
                     passwordHelp.className = "text-danger";
                     passwordHelp.innerHTML = "Weak password. Use uppercase, lowercase, number, special character, and at least 8 characters.";
