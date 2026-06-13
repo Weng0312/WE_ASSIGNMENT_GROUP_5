@@ -43,28 +43,25 @@ try {
         date('Y-m-d H:i:s');
 
     if ($eventRow) {
-        $eventDateTime =
-            strtotime(
-                $eventRow['eventDate'] .
-                ' ' .
-                $eventRow['eventStartTime']
-            );
+        $eventStartDateTime =
+            strtotime($eventRow['eventDate'] . ' ' . $eventRow['eventStartTime']);
 
         $currentDateTime =
-            time();
+            strtotime($checkInTime);
 
-        if ($currentDateTime > $eventDateTime) {
-            $attendanceStatus =
-                'Late';
+        if ($currentDateTime > $eventStartDateTime) {
+            $attendanceStatus = 'Late';
         }
     }
 
     $registrationStmt = $pdo->prepare("
-        SELECT EventRegistration_ID
+        SELECT
+            EventRegistration_ID
         FROM event_registration
         WHERE Event_ID = ?
           AND User_ID = ?
           AND eventRegistrationStatus = 'Approved'
+        LIMIT 1
     ");
 
     $registrationStmt->execute([
@@ -72,39 +69,41 @@ try {
         $selectedUserID
     ]);
 
-    $registrationRow =
+    $registration =
         $registrationStmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$registrationRow) {
+    if (!$registration) {
         redirectAttendance(
             $selectedEventID,
-            'This student is not registered or approved for this event.',
+            'This student is not an approved participant for this event.',
             'danger'
         );
     }
 
     $eventRegistrationID =
-        $registrationRow['EventRegistration_ID'];
+        $registration['EventRegistration_ID'];
 
-    $checkAttendanceStmt = $pdo->prepare("
-        SELECT Attendance_ID
+    $duplicateStmt = $pdo->prepare("
+        SELECT
+            Attendance_ID
         FROM event_attendance
         WHERE EventRegistrationID = ?
+        LIMIT 1
     ");
 
-    $checkAttendanceStmt->execute([
+    $duplicateStmt->execute([
         $eventRegistrationID
     ]);
 
-    if ($checkAttendanceStmt->rowCount() > 0) {
+    if ($duplicateStmt->fetch(PDO::FETCH_ASSOC)) {
         redirectAttendance(
             $selectedEventID,
-            'Error: This student has already taken attendance for this event.',
-            'danger'
+            'Attendance already exists for this student.',
+            'warning'
         );
     }
 
-    $stmt = $pdo->prepare("
+    $insertAttendance = $pdo->prepare("
         INSERT INTO event_attendance
         (
             attendanceType,
@@ -116,9 +115,9 @@ try {
         VALUES (?, ?, ?, ?, ?)
     ");
 
-    $stmt->execute([
+    $insertAttendance->execute([
         'MANUAL',
-        'NA',
+        'MANUAL_ENTRY',
         $attendanceStatus,
         $checkInTime,
         $eventRegistrationID
@@ -127,10 +126,7 @@ try {
     $attendanceID =
         $pdo->lastInsertId();
 
-    $pointsValue =
-        getPoints($attendanceStatus);
-
-    $pointStmt = $pdo->prepare("
+    $insertPoints = $pdo->prepare("
         INSERT INTO points
         (
             pointsValue,
@@ -139,8 +135,8 @@ try {
         VALUES (?, ?)
     ");
 
-    $pointStmt->execute([
-        $pointsValue,
+    $insertPoints->execute([
+        getPoints($attendanceStatus),
         $attendanceID
     ]);
 
@@ -153,8 +149,7 @@ try {
 } catch (PDOException $e) {
     redirectAttendance(
         $selectedEventID,
-        'Database Error: ' . $e->getMessage(),
+        'Error saving attendance: ' . $e->getMessage(),
         'danger'
     );
 }
-?>

@@ -64,6 +64,12 @@ $reportPages = [
                 </a>
             </li>
 
+            <li class="<?= ($currentPage == 'event_dashboard.php') ? 'active' : ''; ?>">
+                <a href="<?= $BASE ?>/Module_3/event_dashboard.php">
+                    <i class="bi bi-shield-fill me-2"></i> Event Management
+                </a>
+            </li>
+
             <li class="<?= in_array($currentPage, $participationPages) ? 'active' : ''; ?>">
                 <a href="<?= $BASE ?>/Module_4/participation_attendance_dashboard.php">
                     <i class="bi bi-bar-chart-fill me-2"></i> Participation & Attendance

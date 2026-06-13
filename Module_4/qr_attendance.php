@@ -3,15 +3,13 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-date_default_timezone_set('Asia/Kuala_Lumpur');
-
 require_once __DIR__ . '/../db_connect.php';
+require_once __DIR__ . '/attendance_helper.php';
 
 /** @var PDO $pdo */
 
 $UMPSA_LAT = 3.5436412;
 $UMPSA_LNG = 103.4288926;
-
 $ALLOWED_RADIUS_METERS = 2000;
 
 $eventID = isset($_GET['event_id']) ? intval($_GET['event_id']) : 0;
@@ -22,51 +20,6 @@ $isLocationVerified = !empty($_SESSION[$locationSessionKey]);
 $message = "";
 $messageType = "";
 $serverLocationBlocked = false;
-
-function clean($value)
-{
-    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
-}
-
-function calculateDistanceMeters($lat1, $lng1, $lat2, $lng2)
-{
-    $earthRadius = 6371000;
-
-    $lat1Rad = deg2rad($lat1);
-    $lat2Rad = deg2rad($lat2);
-
-    $deltaLat = deg2rad($lat2 - $lat1);
-    $deltaLng = deg2rad($lng2 - $lng1);
-
-    $a = sin($deltaLat / 2) * sin($deltaLat / 2) +
-        cos($lat1Rad) * cos($lat2Rad) *
-        sin($deltaLng / 2) * sin($deltaLng / 2);
-
-    $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-
-    return $earthRadius * $c;
-}
-
-function getPointValue($attendanceStatus)
-{
-    if ($attendanceStatus === 'Present') {
-        return 10;
-    }
-
-    if ($attendanceStatus === 'Late') {
-        return 5;
-    }
-
-    if ($attendanceStatus === 'Volunteer') {
-        return 5;
-    }
-
-    if ($attendanceStatus === 'Absent') {
-        return -10;
-    }
-
-    return 0;
-}
 
 if ($eventID <= 0) {
     $serverLocationBlocked = true;
@@ -220,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$serverLocationBlocked && $event) 
                             }
                         }
 
-                        $pointsValue = getPointValue($attendanceStatus);
+                        $pointsValue = getPoints($attendanceStatus);
                         $currentQrUrl = "qr_attendance.php?event_id=" . $eventID;
 
                         $pdo->beginTransaction();
@@ -303,8 +256,7 @@ foreach ($participants as $participant) {
     <meta charset="UTF-8">
     <title>QR Attendance</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="../STYLE/CSS/Module 4/qr_attendance_CSS.css">
-    <title>QR Attendance Form</title>
+    <link rel="stylesheet" href="../STYLE/CSS/Module_4/qr_attendance_CSS.css">
 </head>
 
 <body class="attendance-page">
@@ -314,7 +266,7 @@ foreach ($participants as $participant) {
     <div class="attendance-card error-screen">
         <div class="error-icon">!</div>
         <h1>Access Denied</h1>
-        <p><?php echo clean($message); ?></p>
+        <p><?php echo e($message); ?></p>
         <p>Please scan the QR code again inside UMPSA Pekan.</p>
     </div>
 
@@ -348,24 +300,24 @@ foreach ($participants as $participant) {
             </div>
 
             <div class="event-info">
-                <h2><?php echo clean($event['eventTitle']); ?></h2>
-                <p><strong>Date:</strong> <?php echo clean($event['eventDate']); ?></p>
+                <h2><?php echo e($event['eventTitle']); ?></h2>
+                <p><strong>Date:</strong> <?php echo e($event['eventDate']); ?></p>
                 <p>
                     <strong>Time:</strong>
-                    <?php echo clean($event['eventStartTime']); ?>
+                    <?php echo e($event['eventStartTime']); ?>
                     -
-                    <?php echo clean($event['eventEndTime']); ?>
+                    <?php echo e($event['eventEndTime']); ?>
                 </p>
-                <p><strong>Venue:</strong> <?php echo clean($event['eventVenue']); ?></p>
+                <p><strong>Venue:</strong> <?php echo e($event['eventVenue']); ?></p>
             </div>
 
             <?php if ($message !== ''): ?>
-                <div class="message <?php echo clean($messageType); ?>">
-                    <?php echo clean($message); ?>
+                <div class="message <?php echo e($messageType); ?>">
+                    <?php echo e($message); ?>
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="qr_attendance.php?event_id=<?php echo clean($eventID); ?>">
+            <form method="POST" action="qr_attendance.php?event_id=<?php echo e($eventID); ?>">
 
                 <input type="hidden" name="latitude" id="latitude">
                 <input type="hidden" name="longitude" id="longitude">
@@ -385,8 +337,8 @@ foreach ($participants as $participant) {
 
                     <datalist id="studentList">
                         <?php foreach ($participants as $participant): ?>
-                            <option value="<?php echo clean($participant['studentID']); ?>">
-                                <?php echo clean($participant['userName']); ?>
+                            <option value="<?php echo e($participant['studentID']); ?>">
+                                <?php echo e($participant['userName']); ?>
                             </option>
                         <?php endforeach; ?>
                     </datalist>

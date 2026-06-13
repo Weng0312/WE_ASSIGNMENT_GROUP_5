@@ -2,25 +2,13 @@
 session_start();
 
 require_once __DIR__ . '/../db_connect.php';
+require_once __DIR__ . '/attendance_helper.php';
 
 /** @var PDO $pdo */
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Administrator') {
     header("Location: ../Module_1/index.php");
     exit();
-}
-
-/* ===============================
-   HELPER FUNCTIONS
-================================ */
-function e($value)
-{
-    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
-}
-
-function selected($value1, $value2)
-{
-    return ((string)$value1 === (string)$value2) ? 'selected' : '';
 }
 
 /* ===============================
@@ -119,7 +107,7 @@ if (!empty($where)) {
 }
 
 /* ===============================
-   MOST ACTIVE CLUBS DATA ORDER: Highest Attendance
+   MOST ACTIVE CLUBS DATA
 ================================ */
 $activeClubsStmt = $pdo->prepare("
     SELECT
@@ -168,7 +156,7 @@ $activeClubsStmt = $pdo->prepare("
         c.clubName
 
     ORDER BY
-        attendanceRate,
+        attendanceRate DESC,
         totalAttendance DESC,
         totalParticipation DESC,
         totalEventsConducted DESC,
@@ -216,7 +204,7 @@ $activeClubs = $activeClubsStmt->fetchAll(PDO::FETCH_ASSOC);
                     </h1>
 
                     <p class="active-clubs-subtitle">
-                        Clubs are arranged in descending order based on attendance, participation, and events conducted.
+                        Clubs are arranged in descending order based on attendance rate, participation, and events conducted.
                     </p>
                 </div>
 
@@ -227,7 +215,6 @@ $activeClubs = $activeClubsStmt->fetchAll(PDO::FETCH_ASSOC);
 
             </div>
 
-            <!-- FILTER SECTION -->
             <form method="GET" id="filterForm" class="active-clubs-filter-card">
 
                 <div class="row g-3 align-items-end">
@@ -300,7 +287,6 @@ $activeClubs = $activeClubsStmt->fetchAll(PDO::FETCH_ASSOC);
 
             </form>
 
-            <!-- LIST SECTION -->
             <div class="dashboard-table-card active-clubs-list-card">
 
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -310,6 +296,7 @@ $activeClubs = $activeClubsStmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
 
                 <div class="table-responsive">
+
                     <table class="table align-middle active-clubs-table">
 
                         <thead>
@@ -324,11 +311,15 @@ $activeClubs = $activeClubsStmt->fetchAll(PDO::FETCH_ASSOC);
                         </thead>
 
                         <tbody>
+
                             <?php if (!empty($activeClubs)): ?>
+
                                 <?php $rank = 1; ?>
 
                                 <?php foreach ($activeClubs as $club): ?>
+
                                     <tr>
+
                                         <td>
                                             <?php if ($rank === 1): ?>
                                                 <span class="rank-badge first">
@@ -370,21 +361,27 @@ $activeClubs = $activeClubsStmt->fetchAll(PDO::FETCH_ASSOC);
                                                 <?= e(number_format((float)$club['attendanceRate'], 2)) ?>%
                                             </span>
                                         </td>
+
                                     </tr>
 
                                     <?php $rank++; ?>
+
                                 <?php endforeach; ?>
 
                             <?php else: ?>
+
                                 <tr>
                                     <td colspan="6" class="text-center text-muted py-4">
                                         No active club data found.
                                     </td>
                                 </tr>
+
                             <?php endif; ?>
+
                         </tbody>
 
                     </table>
+
                 </div>
 
             </div>
