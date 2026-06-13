@@ -64,8 +64,8 @@ $reportPages = [
                 </a>
             </li>
 
-            <li class="<?= ($currentPage == 'event_dashboard.php') ? 'active' : ''; ?>">
-                <a href="<?= $BASE ?>/Module_3/event_dashboard.php">
+            <li class="<?= ($currentPage == 'event_management_dashboard.php') ? 'active' : ''; ?>">
+                <a href="<?= $BASE ?>/Module_3/event_management_dashboard.php">
                     <i class="bi bi-shield-fill me-2"></i> Event Management
                 </a>
             </li>
