@@ -15,6 +15,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Administrator') {
     exit();
 }
 
+// ==========================================
+// [DATA AGGREGATION & KPI STATS]
+// ==========================================
 // --- 1. Fetch Summary Statistics ---
 $stmt = $pdo->query("SELECT COUNT(*) FROM user WHERE userRole = 'Student'");
 $totalStudents = $stmt->fetchColumn();
@@ -88,10 +91,16 @@ $recentUsers = $stmt->fetchAll();
 
             <div class="container-fluid">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 class="h2 fw-bold mb-0">Administrator Dashboard</h1>
+                    <div>
+                        <h1 class="h2 fw-bold mb-0">Welcome, <?php echo htmlspecialchars($_SESSION['name']); ?>!</h1>
+                        <p class="text-muted mb-0">Administrator Dashboard</p>
+                    </div>
                     <span class="text-muted"><?php echo date('l, jS F Y'); ?></span>
                 </div>
 
+                <!-- ========================================== -->
+                <!-- [ADMIN QUICK SEARCH PORTAL]   -->
+                <!-- ========================================== -->
                 <!-- Quick Search Portal (3 Distinct Search Functions) -->
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white py-3">
@@ -121,7 +130,7 @@ $recentUsers = $stmt->fetchAll();
                             </div>
                             <!-- Event Search -->
                             <div class="col-md-4">
-                                <form action="../Module_3/event_management.php" method="GET">
+                                <form action="../Module_3/event_list.php" method="GET">
                                     <label for="eventSearchInput" class="form-label small fw-bold text-secondary">Search Club Events</label>
                                     <div class="input-group">
                                         <input type="text" name="search" id="eventSearchInput" class="form-control form-control-sm" placeholder="Search event title..." required>

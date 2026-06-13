@@ -34,7 +34,7 @@ elseif ($myClubID == 0 && isset($_SESSION['user_id'])) {
         $autoDetectStmt = $pdo->prepare($autoDetectQuery);
         $autoDetectStmt->execute([$_SESSION['user_id']]);
         $autoDetectResult = $autoDetectStmt->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($autoDetectResult) {
             $myClubID = (int) $autoDetectResult['Club_ID'];
         }
@@ -104,6 +104,7 @@ try {
 }
 
 $statusFilter = $_GET['status'] ?? 'All Statuses';
+$searchQuery = trim($_GET['search'] ?? '');
 
 try {
     // Scoped main event loop array structure to club boundary
@@ -111,7 +112,7 @@ try {
     $stmt = $pdo->prepare($query);
     $stmt->execute([$myClubID]);
     $rawEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Filter events based on status ahead of time to keep dashboard entry numbers completely precise
     $events = [];
     $todayStr = date('Y-m-d'); // Current date string (e.g., '2026-06-04')
@@ -129,11 +130,16 @@ try {
         }
 
         if ($statusFilter === 'All Statuses' || $statusFilter === $eventStatus) {
+            if ($searchQuery !== '') {
+                if (stripos($event['eventTitle'], $searchQuery) === false && stripos($event['eventVenue'], $searchQuery) === false) {
+                    continue;
+                }
+            }
             $event['computedStatus'] = $eventStatus;
             $events[] = $event;
         }
     }
-    
+
 } catch (PDOException $e) {
     die("Error fetching events list: " . $e->getMessage());
 }
@@ -165,7 +171,7 @@ try {
             background: #ffffff;
             border: 1px solid rgba(115, 118, 134, 0.15);
             border-radius: 0.75rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
         }
 
         .metric-icon {
@@ -182,7 +188,7 @@ try {
             background: #ffffff;
             border-radius: 0.75rem;
             border: 1px solid rgba(115, 118, 134, 0.15);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
             overflow: hidden;
         }
 
@@ -239,13 +245,21 @@ try {
 
         /* Clean optimization rule sets for clean PDF outputs via window.print() */
         @media print {
-            #sidebar, .topbar, nav, .btn, .d-flex.align-items-center.gap-2, .p-4.border-b {
+
+            #sidebar,
+            .topbar,
+            nav,
+            .btn,
+            .d-flex.align-items-center.gap-2,
+            .p-4.border-b {
                 display: none !important;
             }
+
             #content {
                 margin: 0 !important;
                 padding: 0 !important;
             }
+
             body {
                 background-color: #ffffff;
             }
@@ -281,10 +295,13 @@ try {
                 <div class="d-flex justify-content-between align-items-end mb-4">
                     <div>
                         <h2 class="fw-bold mb-1" style="font-size: 32px; letter-spacing: -0.02em;">Event Management</h2>
-                        <p class="text-muted mb-0">Coordinate, track, and manage all student club activities. (Club ID: <?php echo e($myClubID); ?>)</p>
+                        <p class="text-muted mb-0">Coordinate, track, and manage all student club activities. (Club ID:
+                            <?php echo e($myClubID); ?>)</p>
                     </div>
 
-                    <a href="create_event.php" class="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 fw-bold shadow-sm" style="background-color: #003ca0; border: none; border-radius: 0.5rem;">
+                    <a href="create_event.php"
+                        class="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 fw-bold shadow-sm"
+                        style="background-color: #003ca0; border: none; border-radius: 0.5rem;">
                         <i class="bi bi-plus-lg"></i> Create New Event
                     </a>
                 </div>
@@ -341,33 +358,42 @@ try {
 
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
-                        <div class="card border shadow-sm p-4 h-100" style="border-radius: 0.75rem; background: #ffffff;">
-                            <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-star-fill text-warning me-2"></i> Most Popular Events</h5>
+                        <div class="card border shadow-sm p-4 h-100"
+                            style="border-radius: 0.75rem; background: #ffffff;">
+                            <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-star-fill text-warning me-2"></i> Most
+                                Popular Events</h5>
                             <ul class="list-group list-group-flush">
-                                <?php foreach($popularEventsList as $popEvent): ?>
-                                    <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
-                                        <span class="text-secondary fw-medium"><?php echo e($popEvent['eventTitle']); ?></span>
-                                        <span class="badge rounded-pill bg-primary"><?php echo $popEvent['reg_count']; ?> attendees</span>
+                                <?php foreach ($popularEventsList as $popEvent): ?>
+                                    <li
+                                        class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
+                                        <span
+                                            class="text-secondary fw-medium"><?php echo e($popEvent['eventTitle']); ?></span>
+                                        <span class="badge rounded-pill bg-primary"><?php echo $popEvent['reg_count']; ?>
+                                            attendees</span>
                                     </li>
                                 <?php endforeach; ?>
-                                <?php if(empty($popularEventsList)): ?>
+                                <?php if (empty($popularEventsList)): ?>
                                     <p class="text-muted small">No registration analytics data available.</p>
                                 <?php endif; ?>
                             </ul>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
-                        <div class="card border shadow-sm p-4 h-100" style="border-radius: 0.75rem; background: #ffffff;">
-                            <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-graph-up-arrow text-success me-2"></i> Monthly Event Trends</h5>
+                        <div class="card border shadow-sm p-4 h-100"
+                            style="border-radius: 0.75rem; background: #ffffff;">
+                            <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-graph-up-arrow text-success me-2"></i>
+                                Monthly Event Trends</h5>
                             <div class="d-flex gap-2 flex-wrap">
-                                <?php foreach($monthlyTrends as $trend): ?>
+                                <?php foreach ($monthlyTrends as $trend): ?>
                                     <div class="border rounded p-2 text-center bg-light" style="min-width: 90px;">
-                                        <small class="text-muted d-block font-monospace"><?php echo $trend['month_year']; ?></small>
-                                        <strong class="fs-5 text-dark"><?php echo $trend['event_count']; ?></strong> <small class="text-muted">events</small>
+                                        <small
+                                            class="text-muted d-block font-monospace"><?php echo $trend['month_year']; ?></small>
+                                        <strong class="fs-5 text-dark"><?php echo $trend['event_count']; ?></strong> <small
+                                            class="text-muted">events</small>
                                     </div>
                                 <?php endforeach; ?>
-                                <?php if(empty($monthlyTrends)): ?>
+                                <?php if (empty($monthlyTrends)): ?>
                                     <p class="text-muted small">No monthly trends available yet.</p>
                                 <?php endif; ?>
                             </div>
@@ -377,20 +403,49 @@ try {
 
                 <div class="table-container mb-4">
                     <div class="p-4 border-b d-flex justify-content-between align-items-center flex-wrap gap-3">
-                        <h4 class="fw-bold mb-0" style="font-size: 20px;">Event List (<?php echo e($statusFilter); ?>)</h4>
+                        <h4 class="fw-bold mb-0" style="font-size: 20px;">Event List (<?php echo e($statusFilter); ?>)
+                        </h4>
 
                         <div class="d-flex align-items-center gap-2">
+                            <form method="GET" class="d-flex align-items-center gap-1">
+                                <?php if ($statusFilter !== 'All Statuses'): ?>
+                                    <input type="hidden" name="status" value="<?php echo e($statusFilter); ?>">
+                                <?php endif; ?>
+                                <?php if ($myClubID > 0): ?>
+                                    <input type="hidden" name="club_id" value="<?php echo e($myClubID); ?>">
+                                <?php endif; ?>
+                                <div class="input-group input-group-sm rounded border bg-light"
+                                    style="max-width: 200px;">
+                                    <input type="text" name="search"
+                                        class="form-control form-control-sm border-0 bg-transparent"
+                                        placeholder="Search events..." value="<?php echo e($searchQuery); ?>">
+                                    <?php if ($searchQuery !== ''): ?>
+                                        <a href="?<?php echo $statusFilter !== 'All Statuses' ? 'status=' . urlencode($statusFilter) : ''; ?>"
+                                            class="btn btn-sm btn-link text-decoration-none text-muted p-1 px-2 d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-x-circle-fill"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-outline-primary px-3 py-1.5"><i
+                                        class="bi bi-search"></i></button>
+                            </form>
+
                             <div class="d-flex align-items-center bg-light px-3 py-1 rounded border">
                                 <i class="bi bi-filter text-muted me-2"></i>
-                                <select class="form-select form-select-sm border-0 bg-transparent shadow-none p-0 pe-4" onchange="location = this.value;">
-                                    <option value="?status=All Statuses" <?php echo $statusFilter === 'All Statuses' ? 'selected' : ''; ?>>All Statuses</option>
-                                    <option value="?status=Upcoming" <?php echo $statusFilter === 'Upcoming' ? 'selected' : ''; ?>>Upcoming</option>
-                                    <option value="?status=Ongoing" <?php echo $statusFilter === 'Ongoing' ? 'selected' : ''; ?>>Ongoing</option>
-                                    <option value="?status=Completed" <?php echo $statusFilter === 'Completed' ? 'selected' : ''; ?>>Completed</option>
+                                <?php
+                                $searchQueryEncoded = !empty($searchQuery) ? '&search=' . urlencode($searchQuery) : '';
+                                ?>
+                                <select class="form-select form-select-sm border-0 bg-transparent shadow-none p-0 pe-4"
+                                    onchange="location = this.value;">
+                                    <option value="?status=All Statuses<?php echo $searchQueryEncoded; ?>" <?php echo $statusFilter === 'All Statuses' ? 'selected' : ''; ?>>All Statuses</option>
+                                    <option value="?status=Upcoming<?php echo $searchQueryEncoded; ?>" <?php echo $statusFilter === 'Upcoming' ? 'selected' : ''; ?>>Upcoming</option>
+                                    <option value="?status=Ongoing<?php echo $searchQueryEncoded; ?>" <?php echo $statusFilter === 'Ongoing' ? 'selected' : ''; ?>>Ongoing</option>
+                                    <option value="?status=Completed<?php echo $searchQueryEncoded; ?>" <?php echo $statusFilter === 'Completed' ? 'selected' : ''; ?>>Completed</option>
                                 </select>
                             </div>
 
-                            <button onclick="window.print()" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 px-3 py-2 fw-medium">
+                            <button onclick="window.print()"
+                                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 px-3 py-2 fw-medium">
                                 <i class="bi bi-download"></i> Export PDF
                             </button>
                         </div>
@@ -442,11 +497,12 @@ try {
                                         $pendingStmt->execute([$event['Event_ID']]);
                                         $pendingCount = $pendingStmt->fetchColumn();
 
-                                        $capacity = (int)$event['eventMaxParticipant'] > 0 ? (int)$event['eventMaxParticipant'] : 1;
+                                        $capacity = (int) $event['eventMaxParticipant'] > 0 ? (int) $event['eventMaxParticipant'] : 1;
                                         $percentage = min(100, round(($registeredCount / $capacity) * 100));
-                                    ?>
+                                        ?>
                                         <tr>
-                                            <td class="text-muted font-monospace"><?php echo sprintf("%02d", $counter++); ?></td>
+                                            <td class="text-muted font-monospace"><?php echo sprintf("%02d", $counter++); ?>
+                                            </td>
                                             <td>
                                                 <p class="fw-bold mb-0 text-dark">
                                                     <?php echo e($event['eventTitle']); ?>
@@ -464,11 +520,11 @@ try {
                                             <td>
                                                 <div class="d-flex align-items-center justify-content-center gap-2">
                                                     <span class="fw-bold"><?php echo $registeredCount; ?></span>
-                                                    <div class="progress d-none d-md-flex" style="width: 64px; height: 6px; border-radius: 999px;">
+                                                    <div class="progress d-none d-md-flex"
+                                                        style="width: 64px; height: 6px; border-radius: 999px;">
                                                         <div class="progress-bar" role="progressbar"
                                                             style="width: <?php echo $percentage; ?>%; background-color: #003ca0;"
-                                                            aria-valuenow="<?php echo $percentage; ?>"
-                                                            aria-valuemin="0"
+                                                            aria-valuenow="<?php echo $percentage; ?>" aria-valuemin="0"
                                                             aria-valuemax="100">
                                                         </div>
                                                     </div>
@@ -489,22 +545,19 @@ try {
                                                 <div class="d-inline-flex gap-1">
                                                     <a href="view_event.php?id=<?php echo $event['Event_ID']; ?>"
                                                         class="btn btn-sm btn-light text-primary rounded-circle p-2 d-flex align-items-center justify-content-center"
-                                                        style="width: 36px; height: 36px;"
-                                                        title="View Details">
+                                                        style="width: 36px; height: 36px;" title="View Details">
                                                         <i class="bi bi-eye" style="font-size: 16px;"></i>
                                                     </a>
 
                                                     <a href="edit_event.php?id=<?php echo $event['Event_ID']; ?>"
                                                         class="btn btn-sm btn-light text-success rounded-circle p-2 d-flex align-items-center justify-content-center"
-                                                        style="width: 36px; height: 36px;"
-                                                        title="Edit Event">
+                                                        style="width: 36px; height: 36px;" title="Edit Event">
                                                         <i class="bi bi-pencil" style="font-size: 16px;"></i>
                                                     </a>
 
                                                     <a href="delete_event.php?id=<?php echo $event['Event_ID']; ?>"
                                                         class="btn btn-sm btn-light text-danger rounded-circle p-2 d-flex align-items-center justify-content-center"
-                                                        style="width: 36px; height: 36px;"
-                                                        title="Delete Event"
+                                                        style="width: 36px; height: 36px;" title="Delete Event"
                                                         onclick="return confirm('Are you sure you want to completely erase this event record?');">
                                                         <i class="bi bi-trash" style="font-size: 16px;"></i>
                                                     </a>
@@ -530,7 +583,8 @@ try {
                                     </a>
                                 </li>
                                 <li class="page-item active">
-                                    <a class="page-link border rounded" style="background-color: #003ca0; border-color: #003ca0;" href="#">1</a>
+                                    <a class="page-link border rounded"
+                                        style="background-color: #003ca0; border-color: #003ca0;" href="#">1</a>
                                 </li>
                                 <li class="page-item disabled">
                                     <a class="page-link border rounded" href="#">

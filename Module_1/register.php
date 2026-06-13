@@ -1,4 +1,7 @@
 <?php
+// ==========================================
+// [SESSION INITIALIZATION & ADMIN CHECK]
+// ==========================================
 session_start();
 require_once __DIR__ . '/../db_connect.php';
 
@@ -16,6 +19,9 @@ $messageType = "";
 // Fetch clubs for the dropdown
 $clubs = $pdo->query("SELECT Club_ID, clubName FROM club WHERE clubStatus = 'Active'")->fetchAll();
 
+// ==========================================
+// [ACCOUNT REGISTRATION TRANSACTION]
+// ==========================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $loginID = strtoupper(trim($_POST['loginID']));
     $name = $_POST['name'];
@@ -46,7 +52,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Read student ID
             $studentID = strtoupper(trim($loginID));
 
-            // Detect programme from first 2 characters
+            // ==========================================
+            // [ACADEMIC PROGRAMME AUTO-DETECTION]
+            // ==========================================
             $programmeCode = substr($studentID, 0, 2);
 
             switch ($programmeCode) {
@@ -164,6 +172,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div id="wrapper">
         <?php include '../sidebar.php'; ?>
 
+        <!-- ========================================== -->
+        <!-- [USER REGISTRATION INTERFACE] -->
+        <!-- ========================================== -->
         <div id="content">
 
             <div class="container-fluid">

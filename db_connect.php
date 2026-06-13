@@ -3,8 +3,8 @@
 
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
-$host = '127.0.0.1';
-$port = '3307';
+$host = '';
+$port = '';
 $dbname = 'fkstudentclub&eventmanagementsystem'; // Change this to your exact database name
 $username = 'root';                              // Default XAMPP username
 $password = '';                                  // Default XAMPP password is empty

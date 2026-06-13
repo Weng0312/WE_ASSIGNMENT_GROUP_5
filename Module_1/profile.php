@@ -1,4 +1,7 @@
 <?php
+// ==========================================
+// [SESSION INITIALIZATION & USER FETCH]
+// ==========================================
 session_start();
 require_once __DIR__ . '/../db_connect.php';
 
@@ -23,6 +26,9 @@ $stmt = $pdo->prepare("SELECT u.*, s.studentID, a.staffID FROM user u
 $stmt->execute([$user_id]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// ==========================================
+// [ACCOUNT SETTINGS MANAGEMENT]
+// ==========================================
 // 2. Handle Profile Update / Change Password
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -164,6 +170,9 @@ $display_id = ($userRole === 'Administrator')
 
         <?php include '../sidebar.php'; ?>
 
+        <!-- ========================================== -->
+        <!-- [USER PROFILE INTERFACE] -->
+        <!-- ========================================== -->
         <div id="content">
 
             <div class="container-fluid">
@@ -354,6 +363,9 @@ $display_id = ($userRole === 'Administrator')
 
     <script src="../STYLE/BOOTSTRAP/bootstrap.bundle.min.js"></script>
 
+    <!-- ========================================== -->
+    <!-- [PASSWORD SECURITY STRENGTH DYNAMICS] -->
+    <!-- ========================================== -->
     <script>
         const newPassword = document.getElementById('new_password');
         const passwordHelp = document.getElementById('passwordHelp');

@@ -1,4 +1,7 @@
 <?php
+// ==========================================
+// [SESSION INITIALIZATION & CHECK]
+// ==========================================
 session_start();
 require_once __DIR__ . '/../db_connect.php';
 
@@ -17,6 +20,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Student') {
 
 $user_id = $_SESSION['user_id'];
 
+// ==========================================
+// [CALCULATING STUDENT METRICS & POINTS]
+// ==========================================
 // Query 1: Calculate Student's Total Points
 $stmt = $pdo->prepare("
     SELECT 
@@ -67,6 +73,9 @@ $eventCount = (int) $stmt->fetchColumn();
         include '../sidebar.php';
         ?>
 
+        <!-- ========================================== -->
+        <!-- [STUDENT DASHBOARD INTERFACE] -->
+        <!-- ========================================== -->
         <div id="content">
             <div class="container-fluid">
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -104,10 +113,6 @@ $eventCount = (int) $stmt->fetchColumn();
                                     <span class="fs-3 fw-bold text-info"><?= $eventCount ?></span>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="alert alert-success d-inline-block px-5">
-                            <strong>Student ID:</strong> <?php echo htmlspecialchars($_SESSION['studentID']); ?>
                         </div>
                     </div>
                 </div>

@@ -1,5 +1,7 @@
 <?php
-// logout.php
+// ==========================================
+// [SESSION DESTRUCTION & COOKIE CLEARING]
+// ==========================================
 session_start();
 
 // Unset all of the session variables
@@ -22,6 +24,9 @@ if (ini_get("session.use_cookies")) {
 // Finally, destroy the session.
 session_destroy();
 
+// ==========================================
+// [LOGIN REDIRECTION]
+// ==========================================
 // Redirect back to the login page
 header("Location: index.php");
 exit();

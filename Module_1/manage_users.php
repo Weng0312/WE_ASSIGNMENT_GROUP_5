@@ -1,4 +1,7 @@
 <?php
+// ==========================================
+// [SESSION INITIALIZATION & ADMIN CHECK]
+// ==========================================
 session_start();
 require_once __DIR__ . '/../db_connect.php';
 
@@ -12,6 +15,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Administrator') {
 $message = '';
 $messageType = '';
 
+// ==========================================
+// [USER ACCOUNT DELETION TRANSACTION]
+// ==========================================
 if (isset($_GET['delete'])) {
     $delete_id = $_GET['delete'];
 
@@ -36,6 +42,9 @@ if (isset($_GET['delete'])) {
     }
 }
 
+// ==========================================
+// [SEARCH FILTERING & RETRIEVAL LOGIC]
+// ==========================================
 $search = trim($_GET['search'] ?? '');
 $params = [];
 $sql = "SELECT 
@@ -78,6 +87,9 @@ $users = $stmt->fetchAll();
 
         <?php include '../sidebar.php'; ?>
 
+        <!-- ========================================== -->
+        <!-- [USER ACCOUNTS DASHBOARD & CRUD VIEW] -->
+        <!-- ========================================== -->
         <div id="content">
 
             <div class="container-fluid">
