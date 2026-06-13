@@ -21,7 +21,8 @@ $isAuthorized = isset($_SESSION['user_id']) && $_SESSION['role'] === 'Administra
 
 // Intercept security failure directly if request is an asynchronous pipeline fetch
 if (!$isAuthorized && isset($_GET['action'])) {
-    if (ob_get_length()) ob_clean();
+    if (ob_get_length())
+        ob_clean();
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['success' => false, 'data' => null, 'message' => 'Unauthenticated session status context. Please log in again.']);
     exit;
@@ -102,14 +103,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove_membership_id'
 
 // Helper wrapper function declaration context check
 if (!function_exists('json_api_respond')) {
-    function json_api_respond($success, $data = null, $message = '') {
+    function json_api_respond($success, $data = null, $message = '')
+    {
         return json_encode(['success' => $success, 'data' => $data, 'message' => $message]);
     }
 }
 
 // 2. Async API AJAX Payload Controller Handling Routing
 if (isset($_GET['action'])) {
-    if (ob_get_length()) ob_clean();
+    if (ob_get_length())
+        ob_clean();
     header('Content-Type: application/json; charset=utf-8');
     $action = $_GET['action'];
 
@@ -142,11 +145,11 @@ if (isset($_GET['action'])) {
         }
 
         if ($action === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            $club_id     = !empty($_POST['Club_ID']) ? intval($_POST['Club_ID']) : null;
-            $name        = trim($_POST['clubName'] ?? '');
+            $club_id = !empty($_POST['Club_ID']) ? intval($_POST['Club_ID']) : null;
+            $name = trim($_POST['clubName'] ?? '');
             $description = trim($_POST['clubDescription'] ?? '');
-            $advisor     = trim($_POST['clubAdvisorName'] ?? '');
-            $status      = trim($_POST['clubStatus'] ?? 'Active');
+            $advisor = trim($_POST['clubAdvisorName'] ?? '');
+            $status = trim($_POST['clubStatus'] ?? 'Active');
 
             if (empty($name) || empty($advisor)) {
                 echo json_api_respond(false, null, 'Please supply both a Club Name and an Advisor name.');
@@ -214,7 +217,7 @@ if (isset($_GET['action'])) {
 // ==========================================
 if (isset($_GET['view_page'])) {
     $clubId = intval($_GET['view_page']);
-    
+
     $sql = "SELECT c.*, COUNT(m.Membership_ID) as total_members 
             FROM club c 
             LEFT JOIN club_membership m ON c.Club_ID = m.Club_ID 
@@ -288,6 +291,7 @@ if (isset($_GET['view_page'])) {
 
     <!DOCTYPE html>
     <html lang="en">
+
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -295,7 +299,7 @@ if (isset($_GET['view_page'])) {
 
         <link rel="stylesheet" href="../STYLE/CSS/Module_1/adminDashboard_CSS.css">
         <link href="../STYLE/BOOTSTRAP/bootstrap.min.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 
         <style>
             body {
@@ -319,7 +323,7 @@ if (isset($_GET['view_page'])) {
                 background: #ffffff;
                 border: 1px solid #eef2f5;
                 border-radius: 12px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
             }
 
             .club-avatar-placeholder {
@@ -358,7 +362,7 @@ if (isset($_GET['view_page'])) {
                 background: #ffffff;
                 border: 1px solid #eef2f5;
                 border-radius: 12px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
                 margin-bottom: 30px;
                 padding: 24px;
             }
@@ -451,7 +455,7 @@ if (isset($_GET['view_page'])) {
 
             <div id="content">
                 <div class="container py-4" style="max-width: 1000px;">
-                    
+
                     <div class="mb-3">
                         <a href="?" class="back-btn d-inline-flex align-items-center gap-2">
                             <i class="fa-solid fa-arrow-left"></i> Return to Directory Management
@@ -459,7 +463,8 @@ if (isset($_GET['view_page'])) {
                     </div>
 
                     <div class="profile-header-card p-4 mb-4">
-                        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+                        <div
+                            class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="club-avatar-placeholder">
                                     <i class="fa-solid fa-users-gear"></i>
@@ -471,7 +476,8 @@ if (isset($_GET['view_page'])) {
                                     </h2>
 
                                     <div class="d-flex align-items-center gap-2 mt-1">
-                                        <span class="<?php echo $clubStatus === 'Active' ? 'badge-active-clean' : 'badge-inactive-clean'; ?>">
+                                        <span
+                                            class="<?php echo $clubStatus === 'Active' ? 'badge-active-clean' : 'badge-inactive-clean'; ?>">
                                             <?php echo htmlspecialchars($clubStatus); ?>
                                         </span>
                                     </div>
@@ -513,7 +519,8 @@ if (isset($_GET['view_page'])) {
 
                     <div class="clean-section-card">
                         <div class="section-title">
-                            <i class="fa-solid fa-align-left text-muted" style="font-size: 0.95rem;"></i> Description / About
+                            <i class="fa-solid fa-align-left text-muted" style="font-size: 0.95rem;"></i> Description /
+                            About
                         </div>
 
                         <p class="text-secondary mb-0 lh-base" style="white-space: pre-line; font-size: 0.95rem;">
@@ -524,7 +531,8 @@ if (isset($_GET['view_page'])) {
                     <div class="clean-section-card p-0 overflow-hidden">
                         <div class="p-4 pb-2">
                             <div class="section-title mb-0">
-                                <i class="fa-solid fa-user-shield text-primary" style="font-size: 0.95rem;"></i> Executive Committee Board
+                                <i class="fa-solid fa-user-shield text-primary" style="font-size: 0.95rem;"></i> Executive
+                                Committee Board
                             </div>
                         </div>
 
@@ -566,17 +574,20 @@ if (isset($_GET['view_page'])) {
                                                 <td>
                                                     <div class="table-action-group justify-content-center">
                                                         <button type="button"
-                                                                class="btn btn-outline-warning btn-action-mini membership-role-edit-btn"
-                                                                data-membership-id="<?php echo htmlspecialchars($comm['Membership_ID']); ?>"
-                                                                data-club-id="<?php echo htmlspecialchars($clubId); ?>"
-                                                                data-current-role="<?php echo htmlspecialchars($comm['membershipRole']); ?>"
-                                                                data-user-name="<?php echo htmlspecialchars($comm['userName']); ?>">
+                                                            class="btn btn-outline-warning btn-action-mini membership-role-edit-btn"
+                                                            data-membership-id="<?php echo htmlspecialchars($comm['Membership_ID']); ?>"
+                                                            data-club-id="<?php echo htmlspecialchars($clubId); ?>"
+                                                            data-current-role="<?php echo htmlspecialchars($comm['membershipRole']); ?>"
+                                                            data-user-name="<?php echo htmlspecialchars($comm['userName']); ?>">
                                                             <i class="fa-regular fa-pen-to-square"></i> Edit
                                                         </button>
 
-                                                        <form method="POST" onsubmit="return confirm('Remove this committee role? This student will become a normal club member.');">
-                                                            <input type="hidden" name="demote_membership_id" value="<?php echo htmlspecialchars($comm['Membership_ID']); ?>">
-                                                            <input type="hidden" name="return_club_id" value="<?php echo htmlspecialchars($clubId); ?>">
+                                                        <form method="POST"
+                                                            onsubmit="return confirm('Remove this committee role? This student will become a normal club member.');">
+                                                            <input type="hidden" name="demote_membership_id"
+                                                                value="<?php echo htmlspecialchars($comm['Membership_ID']); ?>">
+                                                            <input type="hidden" name="return_club_id"
+                                                                value="<?php echo htmlspecialchars($clubId); ?>">
 
                                                             <button type="submit" class="btn btn-outline-danger btn-action-mini">
                                                                 <i class="fa-regular fa-trash-can"></i> Remove
@@ -595,7 +606,8 @@ if (isset($_GET['view_page'])) {
                     <div class="clean-section-card p-0 overflow-hidden">
                         <div class="p-4 pb-2">
                             <div class="section-title mb-0">
-                                <i class="fa-solid fa-address-book text-success" style="font-size: 0.95rem;"></i> General Club Registry Log
+                                <i class="fa-solid fa-address-book text-success" style="font-size: 0.95rem;"></i> General
+                                Club Registry Log
                             </div>
                         </div>
 
@@ -639,17 +651,20 @@ if (isset($_GET['view_page'])) {
                                                 <td>
                                                     <div class="table-action-group justify-content-center">
                                                         <button type="button"
-                                                                class="btn btn-outline-warning btn-action-mini membership-role-edit-btn"
-                                                                data-membership-id="<?php echo htmlspecialchars($mem['Membership_ID']); ?>"
-                                                                data-club-id="<?php echo htmlspecialchars($clubId); ?>"
-                                                                data-current-role="Member"
-                                                                data-user-name="<?php echo htmlspecialchars($mem['userName']); ?>">
+                                                            class="btn btn-outline-warning btn-action-mini membership-role-edit-btn"
+                                                            data-membership-id="<?php echo htmlspecialchars($mem['Membership_ID']); ?>"
+                                                            data-club-id="<?php echo htmlspecialchars($clubId); ?>"
+                                                            data-current-role="Member"
+                                                            data-user-name="<?php echo htmlspecialchars($mem['userName']); ?>">
                                                             <i class="fa-regular fa-pen-to-square"></i> Edit
                                                         </button>
 
-                                                        <form method="POST" onsubmit="return confirm('Are you sure you want to remove this member from this club?');">
-                                                            <input type="hidden" name="remove_membership_id" value="<?php echo htmlspecialchars($mem['Membership_ID']); ?>">
-                                                            <input type="hidden" name="return_club_id" value="<?php echo htmlspecialchars($clubId); ?>">
+                                                        <form method="POST"
+                                                            onsubmit="return confirm('Are you sure you want to remove this member from this club?');">
+                                                            <input type="hidden" name="remove_membership_id"
+                                                                value="<?php echo htmlspecialchars($mem['Membership_ID']); ?>">
+                                                            <input type="hidden" name="return_club_id"
+                                                                value="<?php echo htmlspecialchars($clubId); ?>">
 
                                                             <button type="submit" class="btn btn-outline-danger btn-action-mini">
                                                                 <i class="fa-regular fa-trash-can"></i> Remove
@@ -690,7 +705,8 @@ if (isset($_GET['view_page'])) {
                             <div class="mb-1">
                                 <label class="form-label fw-semibold text-muted small mb-1">Choose Committee Role</label>
 
-                                <select name="new_membership_role" id="editMembershipRoleSelect" class="form-select" required>
+                                <select name="new_membership_role" id="editMembershipRoleSelect" class="form-select"
+                                    required>
                                     <option value="" disabled>Choose committee role</option>
                                     <option value="President">President</option>
                                     <option value="Vice President">Vice President</option>
@@ -744,10 +760,11 @@ if (isset($_GET['view_page'])) {
             });
         </script>
     </body>
+
     </html>
 
     <?php
-    exit; 
+    exit;
 }
 
 // ==========================================
@@ -777,6 +794,7 @@ try {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -784,7 +802,7 @@ try {
 
     <link rel="stylesheet" href="../STYLE/CSS/Module_1/adminDashboard_CSS.css">
     <link href="../STYLE/BOOTSTRAP/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 
     <style>
         .table-container {
@@ -826,18 +844,19 @@ try {
 
 <body>
     <?php include '../topbar.php'; ?>
-    
+
     <div id="wrapper">
         <?php include '../sidebar.php'; ?>
 
         <div id="content">
             <div class="container-fluid py-4">
-                
+
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h2 class="fw-bold mb-1">Club Management Page</h2>
                         <p class="text-muted mb-0 small">
-                            Administrators can view all clubs, create clubs, edit clubs, delete clubs, and activate or deactivate clubs.
+                            Administrators can view all clubs, create clubs, edit clubs, delete clubs, and activate or
+                            deactivate clubs.
                         </p>
                     </div>
 
@@ -848,7 +867,8 @@ try {
 
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
-                        <div class="card stat-card bg-white p-3 shadow-sm d-flex flex-row align-items-center justify-content-between">
+                        <div
+                            class="card stat-card bg-white p-3 shadow-sm d-flex flex-row align-items-center justify-content-between">
                             <div>
                                 <span class="text-uppercase text-muted small fw-bold">Total Clubs</span>
                                 <h3 class="fw-bold mb-0 mt-1 text-dark" id="statTotalClubs">
@@ -863,7 +883,8 @@ try {
                     </div>
 
                     <div class="col-md-4">
-                        <div class="card stat-card bg-white p-3 shadow-sm d-flex flex-row align-items-center justify-content-between">
+                        <div
+                            class="card stat-card bg-white p-3 shadow-sm d-flex flex-row align-items-center justify-content-between">
                             <div>
                                 <span class="text-uppercase text-muted small fw-bold">Active Scope</span>
                                 <h3 class="fw-bold mb-0 mt-1 text-success" id="statActiveClubs">
@@ -878,7 +899,8 @@ try {
                     </div>
 
                     <div class="col-md-4">
-                        <div class="card stat-card bg-white p-3 shadow-sm d-flex flex-row align-items-center justify-content-between">
+                        <div
+                            class="card stat-card bg-white p-3 shadow-sm d-flex flex-row align-items-center justify-content-between">
                             <div>
                                 <span class="text-uppercase text-muted small fw-bold">Hidden / Inactive</span>
                                 <h3 class="fw-bold mb-0 mt-1 text-danger" id="statInactiveClubs">
@@ -895,18 +917,21 @@ try {
 
                 <div class="row g-3 align-items-center justify-content-between mb-4">
                     <div class="col-sm-auto">
-                        <button onclick="openCreateModal()" class="btn btn-custom-create py-2 px-4 shadow-sm d-flex align-items-center gap-2">
+                        <button onclick="openCreateModal()"
+                            class="btn btn-custom-create py-2 px-4 shadow-sm d-flex align-items-center gap-2">
                             <i class="fa-solid fa-plus"></i> Create Club
                         </button>
                     </div>
 
                     <div class="col-sm-auto d-flex gap-2 match-filters-width">
                         <div class="position-relative" style="min-width: 260px;">
-                            <input id="tableSearch" onkeyup="filterTable()" class="form-control text-sm" placeholder="Search clubs by name or advisor..." type="text"/>
+                            <input id="tableSearch" onkeyup="filterTable()" class="form-control text-sm"
+                                placeholder="Search clubs by name or advisor..." type="text" />
                         </div>
 
                         <div>
-                            <select id="statusFilter" onchange="filterTable()" class="form-select text-sm bg-white" style="min-width: 140px;">
+                            <select id="statusFilter" onchange="filterTable()" class="form-select text-sm bg-white"
+                                style="min-width: 140px;">
                                 <option value="">All Status</option>
                                 <option value="Active">Active</option>
                                 <option value="Inactive">Inactive</option>
@@ -958,12 +983,14 @@ try {
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-muted small mb-1">Advisor Name</label>
-                            <input type="text" id="formClubAdvisor" name="clubAdvisorName" required class="form-control">
+                            <input type="text" id="formClubAdvisor" name="clubAdvisorName" required
+                                class="form-control">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-muted small mb-1">Description</label>
-                            <textarea id="formClubDescription" name="clubDescription" rows="3" class="form-control"></textarea>
+                            <textarea id="formClubDescription" name="clubDescription" rows="3"
+                                class="form-control"></textarea>
                         </div>
 
                         <div class="mb-1">
@@ -1000,8 +1027,8 @@ try {
                     <h5 class="fw-bold text-dark mb-2">Confirm Delete?</h5>
 
                     <p class="text-muted small mb-4">
-                        Are you sure you want to completely erase 
-                        <span id="deleteTargetName" class="fw-bold text-dark"></span> 
+                        Are you sure you want to completely erase
+                        <span id="deleteTargetName" class="fw-bold text-dark"></span>
                         from structural records?
                     </p>
 
@@ -1026,6 +1053,13 @@ try {
         document.addEventListener("DOMContentLoaded", () => {
             formModalInstance = new bootstrap.Modal(document.getElementById('clubFormModal'));
             deleteModalInstance = new bootstrap.Modal(document.getElementById('clubDeleteModal'));
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchParam = urlParams.get('search');
+            if (searchParam) {
+                document.getElementById('tableSearch').value = searchParam;
+            }
+
             refreshClubViewRecords();
         });
 
@@ -1057,7 +1091,7 @@ try {
 
                     return res.json();
                 })
-                .then(res => { 
+                .then(res => {
                     if (res.success) {
                         renderTableStructure(res.data);
                         updateMetricCounters(res.data);
@@ -1172,22 +1206,22 @@ try {
                 method: 'POST',
                 body: new FormData(document.getElementById('clubForm'))
             })
-            .then(res => res.json())
-            .then(res => { 
-                if (res.success) { 
-                    formModalInstance.hide(); 
-                    refreshClubViewRecords(); 
-                } else {
-                    alert(res.message);
-                }
-            });
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success) {
+                        formModalInstance.hide();
+                        refreshClubViewRecords();
+                    } else {
+                        alert(res.message);
+                    }
+                });
         }
 
         function triggerDeletionConfirmation(id, name) {
             document.getElementById('deleteTargetName').innerText = name;
             deleteModalInstance.show();
 
-            document.getElementById('confirmDeleteBtn').onclick = function() {
+            document.getElementById('confirmDeleteBtn').onclick = function () {
                 const fd = new FormData();
                 fd.append('Club_ID', id);
 
@@ -1195,13 +1229,13 @@ try {
                     method: 'POST',
                     body: fd
                 })
-                .then(res => res.json())
-                .then(res => { 
-                    if (res.success) { 
-                        deleteModalInstance.hide(); 
-                        refreshClubViewRecords(); 
-                    } 
-                });
+                    .then(res => res.json())
+                    .then(res => {
+                        if (res.success) {
+                            deleteModalInstance.hide();
+                            refreshClubViewRecords();
+                        }
+                    });
             };
         }
 
@@ -1214,12 +1248,12 @@ try {
                 method: 'POST',
                 body: fd
             })
-            .then(res => res.json())
-            .then(res => {
-                if (res.success) {
-                    refreshClubViewRecords();
-                }
-            });
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success) {
+                        refreshClubViewRecords();
+                    }
+                });
         }
 
         function filterTable() {
@@ -1230,10 +1264,10 @@ try {
                 if (row.cells.length < 6) return;
 
                 const matchSearch = row.cells[1].innerText.toLowerCase().includes(s) ||
-                                    row.cells[2].innerText.toLowerCase().includes(s);
+                    row.cells[2].innerText.toLowerCase().includes(s);
 
                 const matchStatus = statusVal === "" ||
-                                    row.cells[4].innerText.trim() === statusVal;
+                    row.cells[4].innerText.trim() === statusVal;
 
                 if (matchSearch && matchStatus) {
                     row.style.display = "";
@@ -1245,18 +1279,19 @@ try {
 
         function escapeHtml(str) {
             return str ? str.replace(/&/g, "&amp;")
-                            .replace(/</g, "&lt;")
-                            .replace(/>/g, "&gt;")
-                            .replace(/"/g, "&quot;")
-                            .replace(/'/g, "&#039;") : '';
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;") : '';
         }
 
         function escapeJsString(str) {
             return str ? str.replace(/'/g, "\\'")
-                            .replace(/"/g, '\\"') : '';
+                .replace(/"/g, '\\"') : '';
         }
     </script>
 
     <script src="../STYLE/BOOTSTRAP/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

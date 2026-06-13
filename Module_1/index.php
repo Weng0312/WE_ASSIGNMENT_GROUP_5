@@ -1,4 +1,7 @@
 <?php
+// ==========================================
+// [SESSION INITIALIZATION & CHECK]
+// ==========================================
 session_start();
 
 require_once __DIR__ . '/../db_connect.php';
@@ -20,6 +23,9 @@ if (isset($_SESSION['user_id'])) {
 
 $error = '';
 
+// ==========================================
+// [POST LOGIN VALIDATION FLOW]
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $login_id = trim($_POST['student_id']);
     $password = trim($_POST['password']);
@@ -38,6 +44,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $isValidRole = false;
 
+// ==========================================
+// [PASSWORD VERIFICATION & ROLE BINDING]
+// ==========================================
 if ($user && password_verify($password, $user['userPassword'])) {
 
     if ($user['userRole'] === 'Student' && $selected_role === 'Student') {
@@ -106,6 +115,9 @@ $error = "Invalid Student ID/Staff ID, password, or role selected.";
                                         <div class="alert alert-danger"><?php echo $error; ?></div>
                                     <?php endif; ?>
 
+                                    <!-- ========================================== -->
+                                    <!-- [USER LOGIN INTERFACE FORM]  -->
+                                    <!-- ========================================== -->
                                     <form action="index.php" method="POST">
                                         <div class="mb-3">
                                             <label for="student_id" class="form-label fw-bold">Student ID / Admin ID</label>
