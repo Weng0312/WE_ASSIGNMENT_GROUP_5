@@ -2,63 +2,13 @@
 session_start();
 
 require_once __DIR__ . '/../db_connect.php';
+require_once __DIR__ . '/attendance_helper.php';
 
 /** @var PDO $pdo */
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Administrator') {
     header("Location: ../Module_1/index.php");
     exit();
-}
-
-/* ===============================
-   HELPER FUNCTIONS
-================================ */
-function e($value)
-{
-    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
-}
-
-function selected($value1, $value2)
-{
-    return ((string)$value1 === (string)$value2) ? 'selected' : '';
-}
-
-function getRecognitionLevel($totalPoints)
-{
-    $totalPoints = (int)$totalPoints;
-
-    if ($totalPoints < 20) {
-        return 'Warning / Reminder';
-    }
-
-    if ($totalPoints <= 49) {
-        return 'Eligible for Certificate';
-    }
-
-    if ($totalPoints <= 79) {
-        return 'Active Student Award';
-    }
-
-    return 'Outstanding Participant';
-}
-
-function getRecognitionClass($totalPoints)
-{
-    $totalPoints = (int)$totalPoints;
-
-    if ($totalPoints < 20) {
-        return 'warning';
-    }
-
-    if ($totalPoints <= 49) {
-        return 'certificate';
-    }
-
-    if ($totalPoints <= 79) {
-        return 'active';
-    }
-
-    return 'outstanding';
 }
 
 /* ===============================
@@ -84,8 +34,6 @@ $clubs = $clubStmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* ===============================
    FETCH EVENT OPTIONS
-   IF CLUB / SEMESTER SELECTED,
-   ONLY SHOW MATCHING EVENTS
 ================================ */
 $eventOptionWhere = [];
 $eventOptionParams = [];
@@ -160,10 +108,6 @@ if (!empty($where)) {
 
 /* ===============================
    MOST ACTIVE STUDENTS DATA
-   ORDER:
-   1. Highest Points
-   2. Highest Attendance
-   3. Highest Events Joined
 ================================ */
 $activeStudentsStmt = $pdo->prepare("
     SELECT
@@ -257,7 +201,6 @@ $activeStudents = $activeStudentsStmt->fetchAll(PDO::FETCH_ASSOC);
 
             </div>
 
-            <!-- FILTER SECTION -->
             <form method="GET" id="filterForm" class="active-students-filter-card">
 
                 <div class="row g-3 align-items-end">
@@ -330,7 +273,6 @@ $activeStudents = $activeStudentsStmt->fetchAll(PDO::FETCH_ASSOC);
 
             </form>
 
-            <!-- LIST SECTION -->
             <div class="dashboard-table-card active-students-list-card">
 
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -340,6 +282,7 @@ $activeStudents = $activeStudentsStmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
 
                 <div class="table-responsive">
+
                     <table class="table align-middle active-students-table">
 
                         <thead>
@@ -355,16 +298,20 @@ $activeStudents = $activeStudentsStmt->fetchAll(PDO::FETCH_ASSOC);
                         </thead>
 
                         <tbody>
+
                             <?php if (!empty($activeStudents)): ?>
+
                                 <?php $rank = 1; ?>
 
                                 <?php foreach ($activeStudents as $student): ?>
+
                                     <?php
                                     $recognition = getRecognitionLevel($student['totalPoints']);
                                     $recognitionClass = getRecognitionClass($student['totalPoints']);
                                     ?>
 
                                     <tr>
+
                                         <td>
                                             <?php if ($rank === 1): ?>
                                                 <span class="rank-badge first">
@@ -410,21 +357,27 @@ $activeStudents = $activeStudentsStmt->fetchAll(PDO::FETCH_ASSOC);
                                                 <?= e($recognition) ?>
                                             </span>
                                         </td>
+
                                     </tr>
 
                                     <?php $rank++; ?>
+
                                 <?php endforeach; ?>
 
                             <?php else: ?>
+
                                 <tr>
                                     <td colspan="7" class="text-center text-muted py-4">
                                         No active student data found.
                                     </td>
                                 </tr>
+
                             <?php endif; ?>
+
                         </tbody>
 
                     </table>
+
                 </div>
 
             </div>

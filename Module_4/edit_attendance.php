@@ -40,9 +40,11 @@ try {
         getPoints($attendanceStatus);
 
     $attendanceIDStmt = $pdo->prepare("
-        SELECT Attendance_ID
+        SELECT
+            Attendance_ID
         FROM event_attendance
         WHERE EventRegistrationID = ?
+        LIMIT 1
     ");
 
     $attendanceIDStmt->execute([
@@ -57,16 +59,18 @@ try {
             $attendanceRow['Attendance_ID'];
 
         $checkPointStmt = $pdo->prepare("
-            SELECT Point_ID
+            SELECT
+                Points_ID
             FROM points
             WHERE Attendance_ID = ?
+            LIMIT 1
         ");
 
         $checkPointStmt->execute([
             $attendanceID
         ]);
 
-        if ($checkPointStmt->rowCount() > 0) {
+        if ($checkPointStmt->fetch(PDO::FETCH_ASSOC)) {
             $updatePoints = $pdo->prepare("
                 UPDATE points
                 SET pointsValue = ?
@@ -97,15 +101,14 @@ try {
 
     redirectAttendance(
         $selectedEventID,
-        'Attendance updated successfully. ',
+        'Attendance updated successfully.',
         'success'
     );
 
 } catch (PDOException $e) {
     redirectAttendance(
         $selectedEventID,
-        'Update failed: ' . $e->getMessage(),
+        'Error updating attendance: ' . $e->getMessage(),
         'danger'
     );
 }
-?>  

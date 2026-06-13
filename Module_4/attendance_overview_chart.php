@@ -2,22 +2,13 @@
 session_start();
 
 require_once __DIR__ . '/../db_connect.php';
+require_once __DIR__ . '/attendance_helper.php';
 
 /** @var PDO $pdo */
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Administrator') {
     header("Location: ../Module_1/index.php");
     exit();
-}
-
-function e($value)
-{
-    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
-}
-
-function selected($value1, $value2)
-{
-    return ((string)$value1 === (string)$value2) ? 'selected' : '';
 }
 
 /* ===============================

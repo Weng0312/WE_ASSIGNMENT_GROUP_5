@@ -40,15 +40,14 @@ try {
 
     redirectAttendance(
         $selectedEventID,
-        'Attendance record deleted successfully. ',
+        'Attendance deleted successfully.',
         'success'
     );
 
 } catch (PDOException $e) {
     redirectAttendance(
         $selectedEventID,
-        'Delete failed: ' . $e->getMessage(),
+        'Error deleting attendance: ' . $e->getMessage(),
         'danger'
     );
 }
-?>
