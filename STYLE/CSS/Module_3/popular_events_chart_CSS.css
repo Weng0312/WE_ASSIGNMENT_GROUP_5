@@ -1,235 +1,291 @@
-.overview-page {
-    padding-top: 18px;
-}
-
-.overview-header {
-    margin-bottom: 18px !important;
-}
-
-/* FILTER CARD */
-.overview-filter-card {
-    background: #ffffff;
-    border-radius: 18px;
-    padding: 20px 24px;
-    margin-bottom: 20px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
-}
-
-.overview-filter-card label {
-    font-size: 14px;
-    font-weight: 700;
-    color: #334155;
-    margin-bottom: 8px;
-}
-
-.overview-filter-card .form-select,
-.overview-filter-card .form-control {
-    height: 48px;
-    border-radius: 12px;
-    border: 1px solid #cbd5e1;
-    font-size: 14px;
-}
-
-.overview-filter-card .form-select:focus,
-.overview-filter-card .form-control:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-}
-
-/* CHART CARD */
-.overview-chart-card {
-    background: #ffffff;
-    border-radius: 18px;
-    padding: 24px;
-    height: 460px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
-    overflow: hidden;
-}
-
-.overview-chart-card h5 {
-    font-size: 20px;
-    font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 16px;
-}
-
-.overview-chart-card canvas {
-    width: 100% !important;
-    height: 360px !important;
-    max-height: 360px !important;
-}
-
-/* RESPONSIVE */
-@media (max-width: 992px) {
-    .overview-chart-card {
-        height: 430px;
-    }
-
-    .overview-chart-card canvas {
-        height: 330px !important;
-        max-height: 330px !important;
-    }
-}
-
-@media (max-width: 768px) {
-    .overview-title {
-        font-size: 28px;
-    }
-
-    .overview-header {
-        flex-direction: column;
-        align-items: flex-start !important;
-        gap: 12px;
-    }
-
-    .overview-chart-card {
-        height: 390px;
-        padding: 20px;
-    }
-
-    .overview-chart-card canvas {
-        height: 300px !important;
-        max-height: 300px !important;
-    }
-}
-
 /* =========================================================
-   POPULAR EVENTS — DOUGHNUT CHART + RANKING TABLE PAGE
-
-   NOTE: This file assumes the page also loads:
-   - student_participation_events_CSS.css (for
-     .participation-filter-card / .participation-chart-card
-     base rules)
-   - event_management_dashboard_CSS.css (for .event-mgmt-page,
-     title underline, rank badge, color tokens)
+   POPULAR EVENTS — PAGE STYLES
+   Used by: popular_events_chart.php
+   Layout: chart card centered top, ranking table below
+   Palette: amber/gold accent on clean white cards
+   Signature: medal rank badges + live center stat in doughnut
 ========================================================= */
 
 /* -----------------------------------------
-   SIDE-BY-SIDE LAYOUT
-   Chart on the left, ranking table on the right.
-   Stacks vertically on smaller screens.
+   PAGE LAYOUT — single centered column
+   Stacks the doughnut chart card on top of
+   the ranking table card
 ----------------------------------------- */
 .popular-events-layout {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 24px;
-    align-items: stretch;
-}
-
-@media (max-width: 991px) {
-    .popular-events-layout {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* -----------------------------------------
-   CHART CARD — gold top border accent,
-   matching the doughnut's amber palette
------------------------------------------ */
-.popular-chart-card {
-    border-top: 4px solid #f59e0b;
     display: flex;
     flex-direction: column;
-    position: relative;
-}
-
-/* Doughnut chart with a right-side legend needs
-   a bit more height than the default 360px canvas */
-.popular-chart-card canvas {
-    height: 380px !important;
-    max-height: 380px !important;
-    position: absolute;
+    gap: 24px;
+    margin-top: 20px;
 }
 
 /* -----------------------------------------
-   RANKING TABLE CARD
-   White-card look matching .participation-chart-card,
-   sized to align with the chart card on the left
+   CHART CARD — centered, fixed height
+   Contains the doughnut chart, center stat
+   overlay, and custom legend
+----------------------------------------- */
+.popular-chart-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 28px 32px 24px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 6px 24px rgba(15, 23, 42, 0.07);
+    border-top: 4px solid #f59e0b; /* amber/gold accent strip on top */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.popular-chart-card h5 {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+    align-self: flex-start;
+}
+
+.popular-chart-subtitle {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+    margin-bottom: 20px;
+    align-self: flex-start;
+}
+
+/* Doughnut wrapper — fixed size, centered, with overlay stat.
+   IMPORTANT: this fixed 320x320 size controls the chart's
+   rendered dimensions (canvas below is forced to 100%) */
+.popular-chart-wrapper {
+    position: relative;
+    width: 320px;
+    height: 320px;
+    margin: 0 auto;
+}
+
+.popular-chart-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Center stat overlay — sits in the "hole" of the doughnut,
+   showing the grand total registrations count.
+   pointer-events: none lets clicks pass through to the chart */
+.popular-chart-center-stat {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.popular-chart-center-stat .stat-number {
+    font-size: 36px;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1;
+    letter-spacing: -0.03em;
+}
+
+.popular-chart-center-stat .stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin-top: 4px;
+    display: block;
+}
+
+/* Legend row under the doughnut.
+   Items are generated dynamically in JS (one per event slice) */
+.popular-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 20px;
+    margin-top: 20px;
+    max-width: 560px;
+}
+
+.popular-chart-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #475569;
+    font-weight: 500;
+}
+
+/* Colored dot in the legend — color is set inline via JS
+   to match the corresponding doughnut slice */
+.popular-chart-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* -----------------------------------------
+   RANKING TABLE CARD — below the chart
+   Lists every event with rank, name, club, and registration count
 ----------------------------------------- */
 .popular-table-card {
     background: #ffffff;
     border-radius: 18px;
-    padding: 24px;
+    padding: 24px 28px;
     border: 1px solid #e5e7eb;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
-    display: flex;
-    flex-direction: column;
-    height: 460px;
-    overflow: hidden;
+    box-shadow: 0 6px 24px rgba(15, 23, 42, 0.07);
 }
 
 .popular-table-card h5 {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 800;
     color: #0f172a;
-    margin-bottom: 16px;
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
 }
 
-.popular-table-card .table-responsive {
-    flex: 1;
-    overflow-y: auto;
+.popular-table-subtitle {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+
+.popular-table-card .table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
 }
 
 .popular-table-card thead th {
-    font-size: 13px;
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #64748b;
-    border-bottom: 2px solid #e5e7eb;
-    position: sticky;
-    top: 0;
-    background: #ffffff;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    border-bottom: 2px solid #f1f5f9;
+    padding: 10px 14px;
+    white-space: nowrap;
+    background: #fff;
 }
 
 .popular-table-card tbody td {
     font-size: 14px;
     color: #334155;
     vertical-align: middle;
+    padding: 14px 14px;
+    border-bottom: 1px solid #f8fafc;
 }
 
-/* Highlight top-3 rows with a soft gold tint */
-.popular-table-card tbody tr:nth-child(1) {
-    background-color: rgba(245, 158, 11, 0.10);
+.popular-table-card tbody tr:last-child td {
+    border-bottom: none;
 }
 
-.popular-table-card tbody tr:nth-child(2) {
-    background-color: rgba(245, 158, 11, 0.06);
+/* Registration count — right-aligned, bold (key figure) */
+.popular-table-card tbody td:last-child {
+    text-align: right;
+    font-weight: 800;
+    font-size: 15px;
+    color: #0f172a;
 }
 
-.popular-table-card tbody tr:nth-child(3) {
-    background-color: rgba(245, 158, 11, 0.03);
+/* Top-3 row highlights — subtle gold/silver/bronze tinted backgrounds
+   matching the rank badges below */
+.popular-table-card tbody tr:nth-child(1) td {
+    background: rgba(245, 158, 11, 0.07);  /* gold tint */
+}
+.popular-table-card tbody tr:nth-child(2) td {
+    background: rgba(203, 213, 225, 0.15); /* silver tint */
+}
+.popular-table-card tbody tr:nth-child(3) td {
+    background: rgba(180, 120, 60, 0.06);  /* bronze tint */
+}
+
+/* -----------------------------------------
+   MEDAL RANK BADGES
+   Gold / Silver / Bronze for top 3, grey for the rest
+   (rank-other style is in event_management_dashboard_CSS.css)
+----------------------------------------- */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+/* 1st place — gold gradient */
+.rank-badge.rank-1 {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.45);
+}
+
+/* 2nd place — silver gradient */
+.rank-badge.rank-2 {
+    background: linear-gradient(135deg, #94a3b8, #cbd5e1);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(148, 163, 184, 0.4);
+}
+
+/* 3rd place — bronze gradient */
+.rank-badge.rank-3 {
+    background: linear-gradient(135deg, #b45309, #d97706);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(180, 83, 9, 0.35);
+}
+
+/* 4th place onwards — plain grey */
+.rank-badge.rank-other {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* -----------------------------------------
+   CLUB PILL
+   Small rounded label showing which club organized the event
+----------------------------------------- */
+.club-pill {
+    display: inline-block;
+    background: #f1f5f9;
+    color: #475569;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 /* -----------------------------------------
    RESPONSIVE
+   Shrinks the doughnut and reduces card padding on mobile
 ----------------------------------------- */
-@media (max-width: 992px) {
-    .popular-chart-card,
-    .popular-table-card {
-        height: 430px;
-    }
-
-    .popular-chart-card canvas {
-        height: 340px !important;
-        max-height: 340px !important;
-    }
-}
-
 @media (max-width: 768px) {
     .popular-chart-card {
         padding: 20px;
-        height: 390px;
     }
 
-    .popular-chart-card canvas {
-        height: 300px !important;
-        max-height: 300px !important;
+    .popular-chart-wrapper {
+        width: 260px;
+        height: 260px;
+    }
+
+    .popular-chart-center-stat .stat-number {
+        font-size: 28px;
     }
 
     .popular-table-card {
-        padding: 20px;
-        height: 360px;
+        padding: 18px;
+    }
+
+    .popular-table-card thead th,
+    .popular-table-card tbody td {
+        font-size: 12px;
+        padding: 10px 10px;
     }
 }

@@ -5,16 +5,20 @@ require_once __DIR__ . '/../db_connect.php';
 
 /** @var PDO $pdo */
 
+// ACCESS CONTROL: Restrict this page to Administrators only
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Administrator') {
     header("Location: ../Module_1/index.php");
     exit();
 }
 
+// SECURITY HELPER: Escape output to prevent XSS
 function e($value)
 {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
 }
 
+// UI HELPER: Returns 'selected' attribute string if two values match
+// Used to keep the dropdown filter showing the user's current choice
 function selected($value1, $value2)
 {
     return ((string)$value1 === (string)$value2) ? 'selected' : '';
@@ -22,12 +26,15 @@ function selected($value1, $value2)
 
 /* ===============================
    FILTER VALUES
+   Read filter selections from the URL query string (?club_id=...&year=...)
+   Defaults to 'all' if not provided
 ================================ */
 $selectedClubID = $_GET['club_id'] ?? 'all';
 $selectedYear   = $_GET['year'] ?? 'all';
 
 /* ===============================
    FETCH CLUB OPTIONS
+   Populates the "Club" dropdown filter with every club, A–Z
 ================================ */
 $clubStmt = $pdo->prepare("
     SELECT
@@ -42,6 +49,8 @@ $clubs = $clubStmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* ===============================
    FETCH AVAILABLE YEARS
+   Gets every distinct year that has at least one event,
+   used to populate the "Year" dropdown filter
 ================================ */
 $yearStmt = $pdo->prepare("
     SELECT DISTINCT YEAR(eventDate) AS yearValue
@@ -55,12 +64,16 @@ $years = $yearStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $validYears = array_column($years, 'yearValue');
 
+// VALIDATION: If the year in the URL doesn't actually exist in the
+// database, ignore it and fall back to "All Years"
 if ($selectedYear !== 'all' && !in_array((int)$selectedYear, array_map('intval', $validYears))) {
     $selectedYear = 'all';
 }
 
 /* ===============================
    FILTER SQL
+   Dynamically build WHERE clause based on which filters
+   the user has selected (club, year, or both)
 ================================ */
 $where = [];
 $params = [];
@@ -72,7 +85,7 @@ if ($selectedClubID !== 'all' && $selectedClubID !== '') {
 
 if ($selectedYear !== 'all' && $selectedYear !== '') {
     $where[] = "YEAR(e.eventDate) = ?";
-    $params[] = $selectedYear;
+    $params[] = (int)$selectedYear;
 }
 
 $whereSQL = '';
@@ -83,6 +96,10 @@ if (!empty($where)) {
 
 /* ===============================
    MONTHLY EVENT COUNT DATA
+   Main query: counts how many events happened in each month,
+   grouped and ordered chronologically (oldest to newest)
+   - monthKey   -> "2025-01" (used for sorting)
+   - monthLabel -> "Jan 2025" (used for display)
 ================================ */
 $monthlyStmt = $pdo->prepare("
     SELECT
@@ -98,9 +115,12 @@ $monthlyStmt = $pdo->prepare("
 $monthlyStmt->execute($params);
 $monthlyRows = $monthlyStmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Split the results into two arrays for Chart.js:
+// $chartLabels = X-axis labels (months), $chartData = Y-axis values (event counts)
 $chartLabels = array_column($monthlyRows, 'monthLabel');
 $chartData   = array_map('intval', array_column($monthlyRows, 'totalEvents'));
 
+// Used to decide whether to show the chart/table or the "no data" message
 $totalEvents = array_sum($chartData);
 ?>
 
@@ -118,10 +138,12 @@ $totalEvents = array_sum($chartData);
 
     <link rel="stylesheet" href="../STYLE/CSS/Module_3/event_management_dashboard_CSS.css?v=1">
 
-    <link rel="stylesheet" href="../STYLE/CSS/Module_3/monthly_events_trend_chart_CSS.css?v=2">
+    <!-- Page-specific styles (filter card, line chart card, breakdown table) -->
+    <link rel="stylesheet" href="../STYLE/CSS/Module_3/monthly_events_trend_chart_CSS.css?v=3">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
+    <!-- Chart.js library used to draw the line chart below -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -154,12 +176,19 @@ $totalEvents = array_sum($chartData);
 
             </div>
 
-            <!-- FILTER SECTION -->
+            <!-- ===================================================
+                 FILTER SECTION
+                 Two dropdowns: Club and Year.
+                 Changing either dropdown auto-submits the form
+                 (onchange -> form.submit()), reloading the page
+                 with the new filter applied via GET parameters.
+            ==================================================== -->
             <form method="GET" id="filterForm" class="participation-filter-card">
 
                 <div class="row g-3 align-items-end">
 
-                    <div class="col-md-4">
+                    <!-- Club filter dropdown -->
+                    <div class="col-6 col-md-4">
                         <label>Club</label>
 
                         <select name="club_id"
@@ -178,7 +207,8 @@ $totalEvents = array_sum($chartData);
                         </select>
                     </div>
 
-                    <div class="col-md-4">
+                    <!-- Year filter dropdown -->
+                    <div class="col-6 col-md-4">
                         <label>Year</label>
 
                         <select name="year"
@@ -203,10 +233,17 @@ $totalEvents = array_sum($chartData);
 
             <?php if ($totalEvents > 0): ?>
 
-                <!-- CHART SECTION -->
+                <!-- ===================================================
+                     LINE CHART SECTION
+                     Shows events-per-month as a line chart (Chart.js).
+                     Data is injected via PHP -> JS below (json_encode).
+                ==================================================== -->
                 <div class="participation-chart-card mb-4 trend-chart-card">
 
+                    <div class="accent-bar"></div>
+
                     <h5>Number of Events Organized per Month</h5>
+                    <p class="chart-subtitle">Total events recorded across the selected period</p>
 
                     <div class="chart-wrapper">
                         <canvas id="monthlyTrendChart"></canvas>
@@ -214,7 +251,11 @@ $totalEvents = array_sum($chartData);
 
                 </div>
 
-                <!-- TABLE SECTION -->
+                <!-- ===================================================
+                     BREAKDOWN TABLE SECTION
+                     Same data as the chart, shown as a simple table
+                     with a running row number (No.)
+                ==================================================== -->
                 <div class="trend-table-card">
 
                     <h5>Monthly Breakdown</h5>
@@ -249,8 +290,9 @@ $totalEvents = array_sum($chartData);
 
             <?php else: ?>
 
+                <!-- EMPTY STATE: shown when no events match the current filters -->
                 <div class="dashboard-table-card mb-4 text-center">
-                    <i class="fa-solid fa-circle-info fa-2x mb-3 text-muted"></i>
+                    <i class="fa-solid fa-circle-info fa-2x mb-3"></i>
 
                     <h5>No event data found</h5>
 
@@ -271,6 +313,11 @@ $totalEvents = array_sum($chartData);
 
 <?php if ($totalEvents > 0): ?>
 
+<!-- ===================================================
+     CHART.JS SETUP — Line Chart
+     monthlyLabels / monthlyData come straight from PHP
+     (the same arrays used for the table above)
+==================================================== -->
 <script>
 const monthlyLabels = <?= json_encode($chartLabels) ?>;
 const monthlyData   = <?= json_encode($chartData) ?>;
@@ -284,26 +331,44 @@ new Chart(monthlyTrendChartCanvas, {
         datasets: [{
             label: 'Events Organized',
             data: monthlyData,
-            borderColor: '#0d9488',
-            backgroundColor: 'rgba(13, 148, 136, 0.15)',
-            borderWidth: 3,
-            tension: 0.35,
+            borderColor: '#0d9488',          // teal line color (Module 3 theme)
+            backgroundColor: 'rgba(13, 148, 136, 0.08)', // light fill under the line
+            borderWidth: 2.5,
+            tension: 0.4,                    // makes the line curved/smooth
             fill: true,
-            pointRadius: 5,
-            pointBackgroundColor: '#0d9488',
-            pointHoverRadius: 7
+            pointRadius: 4,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: '#0d9488',
+            pointBorderWidth: 2,
+            pointHoverRadius: 6
         }]
     },
     options: {
         responsive: true,
-        maintainAspectRatio: false,
+        maintainAspectRatio: false,   // allows chart to fill the .chart-wrapper height
         resizeDelay: 200,
+        layout: {
+            padding: {
+                top: 10,
+                right: 10,
+                left: 0,
+                bottom: 0
+            }
+        },
         plugins: {
             legend: {
-                display: false
+                display: false   // hide default legend (only one dataset, title already explains it)
             },
             tooltip: {
+                // Custom dark tooltip styling
+                backgroundColor: '#0f172a',
+                titleColor: '#ffffff',
+                bodyColor: '#e2e8f0',
+                padding: 10,
+                cornerRadius: 8,
+                displayColors: false,
                 callbacks: {
+                    // Custom tooltip text: "Events: 5" instead of default "Events Organized: 5"
                     label: function(context) {
                         return 'Events: ' + context.raw;
                     }
@@ -311,10 +376,29 @@ new Chart(monthlyTrendChartCanvas, {
             }
         },
         scales: {
+            x: {
+                grid: {
+                    display: false   // cleaner look without vertical grid lines
+                },
+                ticks: {
+                    color: '#94a3b8',
+                    font: {
+                        size: 12
+                    }
+                }
+            },
             y: {
                 beginAtZero: true,
+                grid: {
+                    color: '#f1f5f9'  // light horizontal grid lines
+                },
                 ticks: {
-                    precision: 0
+                    precision: 0,     // whole numbers only (can't have half an event)
+                    color: '#94a3b8',
+                    font: {
+                        size: 12
+                    },
+                    padding: 8
                 }
             }
         }

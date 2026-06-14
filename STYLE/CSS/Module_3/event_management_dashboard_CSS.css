@@ -1,4 +1,12 @@
-/* REPORT MENU BUTTONS */
+/* =========================================================
+   EVENT MANAGEMENT DASHBOARD (MODULE 3) — MAIN STYLES
+   Covers: the report menu grid on event_management_dashboard.php,
+   plus shared theme tokens/classes reused by all Module 3 report pages
+========================================================= */
+
+/* REPORT MENU BUTTONS
+   The 3 clickable cards on the main dashboard page that link
+   to each report (Monthly Activity, Events per Club, Popular Events) */
 .report-menu-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -17,12 +25,14 @@
     transition: 0.25s ease;
 }
 
+/* Subtle "lift" effect on hover */
 .report-menu-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
     color: #0f172a;
 }
 
+/* Circular icon badge at the top of each card */
 .report-menu-icon {
     width: 68px;
     height: 68px;
@@ -37,6 +47,7 @@
     font-size: 28px;
 }
 
+/* Color variants for icon badges (general-purpose, reused across modules) */
 .report-menu-icon.blue {
     background: #eaf1ff;
     color: #2563eb;
@@ -80,6 +91,7 @@
     line-height: 1.5;
 }
 
+/* RESPONSIVE: keep 2 columns on tablets, collapse to 1 column on mobile */
 @media (max-width: 1200px) {
     .report-menu-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -112,9 +124,9 @@
 
     /* Module 3 color tokens, available to any element
        inside this wrapper via var(--module3-xxx) */
-    --module3-primary: #0d9488;   /* teal   - line chart */
-    --module3-secondary: #fb7185; /* coral  - bar chart */
-    --module3-accent: #f59e0b;    /* gold   - doughnut chart */
+    --module3-primary: #0d9488;   /* teal   - line chart (Monthly Activity) */
+    --module3-secondary: #fb7185; /* coral  - bar chart (Events per Club) */
+    --module3-accent: #f59e0b;    /* gold   - doughnut chart (Popular Events) */
 }
 
 /* -----------------------------------------
@@ -122,6 +134,9 @@
    Same shape/size as Module 4's .report-menu-icon
    (defined in participation_attendance_dashboard_CSS.css),
    just new color combinations for Module 3's 3 cards
+   - teal  = Monthly Event Activity
+   - coral = Events per Club
+   - gold  = Popular Events
 ----------------------------------------- */
 .report-menu-icon.teal {
     background: #ccfbf1;
@@ -163,6 +178,8 @@
 /* -----------------------------------------
    RANK BADGE
    Used in popular_events_chart.php's ranking table
+   (default style for ranks 4+; ranks 1-3 get gold/silver/
+   bronze overrides defined in popular_events_chart_CSS.css)
 ----------------------------------------- */
 .rank-badge {
     display: inline-flex;
@@ -185,4 +202,17 @@
     .event-mgmt-page .participation-report-title {
         font-size: 28px;
     }
+}
+
+/* -----------------------------------------
+   SPECIAL CASE: 3rd report card
+   When there are exactly 3 cards in the grid (2-column layout),
+   center the 3rd card on its own row and make it half-width
+   so it doesn't stretch awkwardly across the full row
+----------------------------------------- */
+.event-mgmt-page .report-menu-grid .report-menu-card:last-child:nth-child(3) {
+    grid-column: 1 / -1;
+    width: calc((100% - 24px) / 2);
+    max-width: calc((100% - 24px) / 2);
+    margin: 0 auto;
 }

@@ -1,198 +1,356 @@
-.overview-page {
-    padding-top: 18px;
-}
-
-.overview-header {
-    margin-bottom: 18px !important;
-}
-
-/* FILTER CARD */
-.overview-filter-card {
-    background: #ffffff;
-    border-radius: 18px;
-    padding: 20px 24px;
-    margin-bottom: 20px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
-}
-
-.overview-filter-card label {
-    font-size: 14px;
-    font-weight: 700;
-    color: #334155;
-    margin-bottom: 8px;
-}
-
-.overview-filter-card .form-select,
-.overview-filter-card .form-control {
-    height: 48px;
-    border-radius: 12px;
-    border: 1px solid #cbd5e1;
-    font-size: 14px;
-}
-
-.overview-filter-card .form-select:focus,
-.overview-filter-card .form-control:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-}
-
-/* CHART CARD */
-.overview-chart-card {
-    background: #ffffff;
-    border-radius: 18px;
-    padding: 24px;
-    height: 460px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
-    overflow: hidden;
-}
-
-.overview-chart-card h5 {
-    font-size: 20px;
-    font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 16px;
-}
-
-.overview-chart-card canvas {
-    width: 100% !important;
-    height: 360px !important;
-    max-height: 360px !important;
-}
-
-/* RESPONSIVE */
-@media (max-width: 992px) {
-    .overview-chart-card {
-        height: 430px;
-    }
-
-    .overview-chart-card canvas {
-        height: 330px !important;
-        max-height: 330px !important;
-    }
-}
-
-@media (max-width: 768px) {
-    .overview-title {
-        font-size: 28px;
-    }
-
-    .overview-header {
-        flex-direction: column;
-        align-items: flex-start !important;
-        gap: 12px;
-    }
-
-    .overview-chart-card {
-        height: 390px;
-        padding: 20px;
-    }
-
-    .overview-chart-card canvas {
-        height: 300px !important;
-        max-height: 300px !important;
-    }
-}
-
 /* =========================================================
-   EVENTS PER CLUB — HORIZONTAL BAR CHART PAGE
-
-   NOTE: This file assumes the page also loads:
-   - student_participation_events_CSS.css (for
-     .participation-filter-card / .participation-chart-card
-     base rules)
-   - event_management_dashboard_CSS.css (for .event-mgmt-page,
-     title underline, color tokens)
+   EVENTS PER CLUB — PAGE STYLES
+   Used by: number_events_club.php
+   Palette: Classic admin navy/slate — easy on the eyes
+   Sections: header, date-range filter card, bar chart card,
+             club breakdown table, empty state
 ========================================================= */
 
-/* -----------------------------------------
-   CHART CARD — coral top border accent,
-   matching this page's bar color palette
------------------------------------------ */
-.club-bar-chart-card {
-    border-top: 4px solid #fb7185;
+/* PAGE BACKGROUND
+   Light grey background for the whole page content area */
+.event-mgmt-page {
+    background: #f4f6f9;
+    min-height: 100vh;
+    padding: 28px 32px 40px;
 }
 
-/* -----------------------------------------
-   Horizontal bar charts need more vertical
-   room when there are many clubs — override
-   the fixed 360px canvas height from
-   student_participation_events_CSS.css
------------------------------------------ */
-.club-bar-chart-card.participation-chart-card {
-    height: auto;
-    min-height: 460px;
-    position: relative; 
+/* ── HEADER ── */
+.nec-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #dde4ed;
 }
 
-.club-bar-chart-card canvas {
-    height: 420px !important;
-    max-height: 420px !important;
-    position: absolute;
+.nec-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin: 0;
+    letter-spacing: -0.3px;
 }
 
-/* -----------------------------------------
-   CLUB BREAKDOWN TABLE CARD
-   Same white-card look as the trend table card,
-   reused here for consistency across Module 3
------------------------------------------ */
-.club-table-card {
+/* Small "Event Management" label above the main title */
+.nec-title span {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.nec-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 18px;
     background: #ffffff;
-    border-radius: 18px;
-    padding: 24px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
-    margin-top: 20px;
+    color: #334155;
+    border: 1px solid #cdd5df;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.18s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
-.club-table-card h5 {
-    font-size: 20px;
-    font-weight: 800;
-    color: #0f172a;
+/* Back button inverts to navy on hover */
+.nec-back-btn:hover {
+    background: #1e3a5f;
+    color: #ffffff;
+    border-color: #1e3a5f;
+    text-decoration: none;
+}
+
+/* ── FILTER CARD ──
+   Contains the Start Date / End Date inputs, Apply/Clear buttons,
+   and the "Filtered: ..." active-filter badge */
+.nec-filter-card {
+    background: #ffffff;
+    border: 1px solid #dde4ed;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(30,58,95,0.06);
+}
+
+.nec-filter-card .filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #64748b;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.nec-filter-card .form-control {
+    border: 1px solid #cdd5df;
+    border-radius: 8px;
+    font-size: 13.5px;
+    color: #334155;
+    background: #f7f9fc;
+    padding: 8px 12px;
+    height: 40px;
+    transition: border-color 0.15s;
+}
+
+/* Blue focus ring matches the navy theme */
+.nec-filter-card .form-control:focus {
+    border-color: #4a7fb5;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(74,127,181,0.15);
+    outline: none;
+}
+
+/* The "→" arrow icon between Start Date and End Date inputs */
+.nec-filter-divider {
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 2px;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* "Apply Filter" button — solid navy */
+.nec-search-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 22px;
+    height: 40px;
+    background: #1e3a5f;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s;
+    white-space: nowrap;
+}
+
+.nec-search-btn:hover {
+    background: #2d5986;
+}
+
+/* "Clear" link — only visible when a date filter is active */
+.nec-clear-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 16px;
+    height: 40px;
+    background: transparent;
+    color: #64748b;
+    border: 1px solid #cdd5df;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.nec-clear-btn:hover {
+    background: #f1f5f9;
+    color: #334155;
+    text-decoration: none;
+}
+
+/* ── ACTIVE FILTER BADGE ──
+   Pill showing "Filtered: <start date> → <end date>" */
+.nec-active-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #e8eff8;
+    color: #1e3a5f;
+    border: 1px solid #b8cfe8;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 12px;
+}
+
+.nec-active-filter i {
+    font-size: 10px;
+    color: #4a7fb5;
+}
+
+/* ── CHART CARD ──
+   Holds the horizontal bar chart (<canvas id="clubEventChart">) */
+.nec-chart-card {
+    background: #ffffff;
+    border: 1px solid #dde4ed;
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(30,58,95,0.06);
+    border-top: 3px solid #1e3a5f; /* navy accent strip on top */
+}
+
+.nec-chart-card h5 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e3a5f;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 20px;
+}
+
+/* IMPORTANT: Control chart size here — fixed 380px height */
+.nec-chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 380px;
+}
+
+.nec-chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ── TABLE CARD ──
+   "Club Breakdown" table beneath the chart */
+.nec-table-card {
+    background: #ffffff;
+    border: 1px solid #dde4ed;
+    border-radius: 12px;
+    padding: 24px 28px;
+    box-shadow: 0 1px 4px rgba(30,58,95,0.06);
+    margin-bottom: 32px;
+}
+
+.nec-table-card h5 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e3a5f;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
     margin-bottom: 16px;
 }
 
-.club-table-card thead th {
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #64748b;
-    border-bottom: 2px solid #e5e7eb;
+.nec-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13.5px;
 }
 
-.club-table-card tbody td {
-    font-size: 14px;
+/* Table header row — light grey background with rounded corner ends */
+.nec-table thead th {
+    background: #f0f4f9;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 10px 16px;
+    border-top: 1px solid #dde4ed;
+    border-bottom: 1px solid #dde4ed;
+}
+
+.nec-table thead th:first-child { border-radius: 8px 0 0 8px; border-left: 1px solid #dde4ed; }
+.nec-table thead th:last-child  { border-radius: 0 8px 8px 0; border-right: 1px solid #dde4ed; }
+
+.nec-table tbody tr {
+    transition: background 0.12s;
+}
+
+/* Row highlight on hover */
+.nec-table tbody tr:hover td {
+    background: #f7f9fc;
+}
+
+.nec-table tbody td {
+    padding: 11px 16px;
     color: #334155;
+    border-bottom: 1px solid #eef1f6;
     vertical-align: middle;
 }
 
-/* -----------------------------------------
-   RESPONSIVE
------------------------------------------ */
-@media (max-width: 992px) {
-    .club-bar-chart-card.participation-chart-card {
-        min-height: 430px;
-    }
-
-    .club-bar-chart-card canvas {
-        height: 390px !important;
-        max-height: 390px !important;
-    }
+/* First column ("#") — muted ranking number */
+.nec-table tbody td:first-child {
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 12px;
+    width: 56px;
 }
 
+/* Small rounded badge wrapping the row number */
+.nec-rank-badge {
+    display: inline-block;
+    background: #e8eff8;
+    color: #2d5986;
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 36px;
+    text-align: center;
+}
+
+/* "Total Events" cell — value + inline progress bar */
+.nec-event-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: #1e3a5f;
+}
+
+/* Inline mini progress bar — width is set per-row via inline style
+   in the PHP file, scaled relative to the club with the most events */
+.nec-event-count-bar {
+    display: inline-block;
+    height: 6px;
+    border-radius: 3px;
+    background: #4a7fb5;
+    min-width: 4px;
+    opacity: 0.6;
+}
+
+/* ── EMPTY STATE ──
+   Shown when no clubs/events match the filter (or none exist at all) */
+.nec-empty {
+    background: #ffffff;
+    border: 1px solid #dde4ed;
+    border-radius: 12px;
+    padding: 56px 24px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(30,58,95,0.06);
+}
+
+.nec-empty i {
+    color: #b8cfe8;
+    margin-bottom: 16px;
+}
+
+.nec-empty h5 {
+    color: #334155;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.nec-empty p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ── RESPONSIVE ──
+   Reduce padding and chart height on small screens */
 @media (max-width: 768px) {
-    .club-bar-chart-card.participation-chart-card {
-        padding: 20px;
-        min-height: 380px;
-    }
-
-    .club-bar-chart-card canvas {
-        height: 340px !important;
-        max-height: 340px !important;
-    }
-
-    .club-table-card {
-        padding: 20px;
-    }
+    .event-mgmt-page { padding: 16px; }
+    .nec-chart-wrap { height: 300px; }
+    .nec-filter-card { padding: 16px; }
+    .nec-chart-card, .nec-table-card { padding: 16px 18px; }
 }
