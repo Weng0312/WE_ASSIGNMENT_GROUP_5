@@ -16,6 +16,7 @@ $selectedClubID = $_GET['club_id'] ?? 'all';
 $selectedEventID = $_GET['event_id'] ?? 'all';
 $startDate = $_GET['start_date'] ?? '';
 $endDate = $_GET['end_date'] ?? '';
+$search = trim($_GET['search'] ?? '');
 
 $reportTitles = [
     'participants_per_event' => 'Number of Participants Per Event',
@@ -68,6 +69,15 @@ $reportData = [];
 
 if ($selectedReport === 'participants_per_event') {
 
+    $reportWhere = $where;
+    $reportParams = $params;
+    if ($search !== '') {
+        $reportWhere[] = "(e.eventTitle LIKE ? OR c.clubName LIKE ?)";
+        $reportParams[] = "%$search%";
+        $reportParams[] = "%$search%";
+    }
+    $reportWhereSQL = empty($reportWhere) ? '' : 'WHERE ' . implode(' AND ', $reportWhere);
+
     $stmt = $pdo->prepare("
         SELECT
             e.Event_ID,
@@ -80,7 +90,7 @@ if ($selectedReport === 'participants_per_event') {
             ON e.Club_ID = c.Club_ID
         LEFT JOIN event_registration er
             ON e.Event_ID = er.Event_ID
-        $whereSQL
+        $reportWhereSQL
         GROUP BY
             e.Event_ID,
             e.eventTitle,
@@ -91,10 +101,19 @@ if ($selectedReport === 'participants_per_event') {
             e.eventTitle ASC
     ");
 
-    $stmt->execute($params);
+    $stmt->execute($reportParams);
     $reportData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } elseif ($selectedReport === 'attendance_rate') {
+
+    $reportWhere = $where;
+    $reportParams = $params;
+    if ($search !== '') {
+        $reportWhere[] = "(e.eventTitle LIKE ? OR c.clubName LIKE ?)";
+        $reportParams[] = "%$search%";
+        $reportParams[] = "%$search%";
+    }
+    $reportWhereSQL = empty($reportWhere) ? '' : 'WHERE ' . implode(' AND ', $reportWhere);
 
     $stmt = $pdo->prepare("
         SELECT
@@ -141,7 +160,7 @@ if ($selectedReport === 'participants_per_event') {
             ON e.Event_ID = er.Event_ID
         LEFT JOIN event_attendance ea
             ON er.EventRegistration_ID = ea.EventRegistrationID
-        $whereSQL
+        $reportWhereSQL
         GROUP BY
             e.Event_ID,
             e.eventTitle,
@@ -152,10 +171,21 @@ if ($selectedReport === 'participants_per_event') {
             e.eventTitle ASC
     ");
 
-    $stmt->execute($params);
+    $stmt->execute($reportParams);
     $reportData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } elseif ($selectedReport === 'student_event_points') {
+
+    $reportWhere = $where;
+    $reportParams = $params;
+    if ($search !== '') {
+        $reportWhere[] = "(s.studentID LIKE ? OR u.userName LIKE ? OR e.eventTitle LIKE ? OR c.clubName LIKE ?)";
+        $reportParams[] = "%$search%";
+        $reportParams[] = "%$search%";
+        $reportParams[] = "%$search%";
+        $reportParams[] = "%$search%";
+    }
+    $reportWhereSQL = empty($reportWhere) ? '' : 'WHERE ' . implode(' AND ', $reportWhere);
 
     $stmt = $pdo->prepare("
         SELECT
@@ -179,16 +209,25 @@ if ($selectedReport === 'participants_per_event') {
             ON er.EventRegistration_ID = ea.EventRegistrationID
         LEFT JOIN points p
             ON ea.Attendance_ID = p.Attendance_ID
-        $whereSQL
+        $reportWhereSQL
         ORDER BY
             e.eventDate DESC,
             u.userName ASC
     ");
 
-    $stmt->execute($params);
+    $stmt->execute($reportParams);
     $reportData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } elseif ($selectedReport === 'overall_student_points') {
+
+    $reportWhere = $where;
+    $reportParams = $params;
+    if ($search !== '') {
+        $reportWhere[] = "(s.studentID LIKE ? OR u.userName LIKE ?)";
+        $reportParams[] = "%$search%";
+        $reportParams[] = "%$search%";
+    }
+    $reportWhereSQL = empty($reportWhere) ? '' : 'WHERE ' . implode(' AND ', $reportWhere);
 
     $stmt = $pdo->prepare("
         SELECT
@@ -207,7 +246,7 @@ if ($selectedReport === 'participants_per_event') {
             ON er.EventRegistration_ID = ea.EventRegistrationID
         LEFT JOIN points p
             ON ea.Attendance_ID = p.Attendance_ID
-        $whereSQL
+        $reportWhereSQL
         GROUP BY
             s.User_ID,
             s.studentID,
@@ -217,10 +256,18 @@ if ($selectedReport === 'participants_per_event') {
             u.userName ASC
     ");
 
-    $stmt->execute($params);
+    $stmt->execute($reportParams);
     $reportData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } elseif ($selectedReport === 'most_active_clubs') {
+
+    $reportWhere = $where;
+    $reportParams = $params;
+    if ($search !== '') {
+        $reportWhere[] = "c.clubName LIKE ?";
+        $reportParams[] = "%$search%";
+    }
+    $reportWhereSQL = empty($reportWhere) ? '' : 'WHERE ' . implode(' AND ', $reportWhere);
 
     $stmt = $pdo->prepare("
         SELECT
@@ -237,7 +284,7 @@ if ($selectedReport === 'participants_per_event') {
             ON er.EventRegistration_ID = ea.EventRegistrationID
         LEFT JOIN points p
             ON ea.Attendance_ID = p.Attendance_ID
-        $whereSQL
+        $reportWhereSQL
         GROUP BY
             c.Club_ID,
             c.clubName
@@ -247,7 +294,7 @@ if ($selectedReport === 'participants_per_event') {
             totalPointsAwarded DESC
     ");
 
-    $stmt->execute($params);
+    $stmt->execute($reportParams);
     $reportData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -324,6 +371,9 @@ ob_start();
     <?= e(!empty($startDate) ? $startDate : 'All') ?>
     to
     <?= e(!empty($endDate) ? $endDate : 'All') ?>
+    <?php if ($search !== ''): ?>
+        <br><strong>Search Keyword:</strong> <?= e($search) ?>
+    <?php endif; ?>
 </div>
 
 <?php if ($selectedReport === 'participants_per_event'): ?>
