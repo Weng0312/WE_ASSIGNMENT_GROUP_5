@@ -1,4 +1,7 @@
 <?php
+// ==========================================
+// [SESSION INITIALIZATION & ADMIN CHECK]
+// ==========================================
 session_start();
 require_once __DIR__ . '/../db_connect.php';
 
@@ -36,6 +39,9 @@ $stmt = $pdo->prepare("
 $stmt->execute([$id]);
 $user = $stmt->fetch();
 
+// ==========================================
+// [UPDATE USER DETAILS TRANSACTION]
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = $_POST['name'];
     $email = $_POST['email'];
@@ -127,11 +133,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <?php include '../sidebar.php'; ?>
 
-    <div id="content">
+        <!-- ========================================== -->
+        <!-- [EDIT USER INTERFACE FORM] -->
+        <!-- ========================================== -->
+        <div id="content">
 
-        <div class="container-fluid">
+            <div class="container-fluid">
 
-            <div class="row justify-content-center">
+                <div class="row justify-content-center">
 
                 <div class="col-lg-6">
 

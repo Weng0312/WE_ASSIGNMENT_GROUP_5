@@ -15,6 +15,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Administrator') {
     exit();
 }
 
+// ==========================================
+// [DATA AGGREGATION & KPI STATS]
+// ==========================================
 // --- 1. Fetch Summary Statistics ---
 $stmt = $pdo->query("SELECT COUNT(*) FROM user WHERE userRole = 'Student'");
 $totalStudents = $stmt->fetchColumn();
@@ -28,11 +31,11 @@ $upcomingEvents = $stmt->fetchColumn();
 // --- 2. Fetch Data for Charts ---
 // Count administrators
 $stmt = $pdo->query("SELECT COUNT(*) FROM user WHERE userRole = 'Administrator'");
-$adminCount = (int)$stmt->fetchColumn();
+$adminCount = (int) $stmt->fetchColumn();
 
 // Count active committee members (distinct User_ID in active club membership where role is not 'Member')
 $stmt = $pdo->query("SELECT COUNT(DISTINCT User_ID) FROM club_membership WHERE membershipStatus = 'Active' AND membershipRole != 'Member'");
-$committeeCount = (int)$stmt->fetchColumn();
+$committeeCount = (int) $stmt->fetchColumn();
 
 // Regular students (all students - committee students)
 $regularStudentCount = max(0, $totalStudents - $committeeCount);
@@ -80,7 +83,7 @@ $recentUsers = $stmt->fetchAll();
 
 <body>
     <?php include '../topbar.php'; ?>
-    
+
     <div id="wrapper">
         <?php include '../sidebar.php'; ?>
 
@@ -88,44 +91,64 @@ $recentUsers = $stmt->fetchAll();
 
             <div class="container-fluid">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 class="h2 fw-bold mb-0">Administrator Dashboard</h1>
+                    <div>
+                        <h1 class="h2 fw-bold mb-0">Welcome, <?php echo htmlspecialchars($_SESSION['name']); ?>!</h1>
+                        <p class="text-muted mb-0">Administrator Dashboard</p>
+                    </div>
                     <span class="text-muted"><?php echo date('l, jS F Y'); ?></span>
                 </div>
 
+                <!-- ========================================== -->
+                <!-- [ADMIN QUICK SEARCH PORTAL]   -->
+                <!-- ========================================== -->
                 <!-- Quick Search Portal (3 Distinct Search Functions) -->
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white py-3">
-                        <h6 class="m-0 fw-bold text-dark"><i class="bi bi-search me-2 text-primary"></i>Quick Search Portal</h6>
+                        <h6 class="m-0 fw-bold text-dark"><i class="bi bi-search me-2 text-primary"></i>Quick Search
+                            Portal</h6>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <!-- User Search -->
                             <div class="col-md-4">
                                 <form action="manage_users.php" method="GET">
-                                    <label for="userSearchInput" class="form-label small fw-bold text-secondary">Search System Users</label>
+                                    <label for="userSearchInput" class="form-label small fw-bold text-secondary">Search
+                                        System Users</label>
                                     <div class="input-group">
-                                        <input type="text" name="search" id="userSearchInput" class="form-control form-control-sm" placeholder="Search ID or name..." required>
-                                        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i></button>
+                                        <input type="text" name="search" id="userSearchInput"
+                                            class="form-control form-control-sm" placeholder="Search ID or name..."
+                                            required>
+                                        <button type="submit" class="btn btn-sm btn-primary"><i
+                                                class="bi bi-search"></i></button>
                                     </div>
                                 </form>
                             </div>
                             <!-- Club Search -->
                             <div class="col-md-4">
                                 <form action="../Module_2/club_management.php" method="GET">
-                                    <label for="clubSearchInput" class="form-label small fw-bold text-secondary">Search Student Clubs</label>
+                                    <label for="clubSearchInput" class="form-label small fw-bold text-secondary">Search
+                                        Student Clubs</label>
                                     <div class="input-group">
-                                        <input type="text" name="search" id="clubSearchInput" class="form-control form-control-sm" placeholder="Search club name..." required>
-                                        <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-search"></i></button>
+                                        <input type="text" name="search" id="clubSearchInput"
+                                            class="form-control form-control-sm" placeholder="Search club name..."
+                                            required>
+                                        <button type="submit" class="btn btn-sm btn-success"><i
+                                                class="bi bi-search"></i></button>
                                     </div>
                                 </form>
                             </div>
-                            <!-- Event Search -->
+                            <!-- Event Search (Student Points & Participation) -->
                             <div class="col-md-4">
-                                <form action="../Module_3/event_management.php" method="GET">
-                                    <label for="eventSearchInput" class="form-label small fw-bold text-secondary">Search Club Events</label>
+                                <form action="../Module_4/report.php" method="GET">
+                                    <input type="hidden" name="report_type" value="overall_student_points">
+                                    <label for="eventSearchInput" class="form-label small fw-bold text-secondary">Search
+                                        Student Points & Participation</label>
                                     <div class="input-group">
-                                        <input type="text" name="search" id="eventSearchInput" class="form-control form-control-sm" placeholder="Search event title..." required>
-                                        <button type="submit" class="btn btn-sm btn-info text-white"><i class="bi bi-search"></i></button>
+                                        <input type="text" name="search" id="eventSearchInput"
+                                            class="form-control form-control-sm"
+                                            placeholder="Search student ID or name..." required>
+                                        <button type="submit" class="btn btn-sm btn-info text-white"><i
+                                                class="bi bi-search"></i></button>
                                     </div>
                                 </form>
                             </div>
@@ -163,7 +186,7 @@ $recentUsers = $stmt->fetchAll();
 
                 <div class="row">
                     <div class="col-lg-8">
-                        
+
                         <div class="row">
                             <!-- User Role Distribution -->
                             <div class="col-md-6">
@@ -215,7 +238,8 @@ $recentUsers = $stmt->fetchAll();
                                                 ?>
                                                 <tr>
                                                     <td class="ps-4 fw-bold">
-                                                        <?php echo htmlspecialchars($user['userName']); ?></td>
+                                                        <?php echo htmlspecialchars($user['userName']); ?>
+                                                    </td>
                                                     <td><span
                                                             class="badge bg-light text-dark border"><?php echo htmlspecialchars($displayRole); ?></span>
                                                     </td>
@@ -248,7 +272,8 @@ $recentUsers = $stmt->fetchAll();
                         <!-- Upcoming Events & Organizing Clubs (Join Table Report 2) -->
                         <div class="card shadow-sm border-0 mb-4">
                             <div class="card-header bg-white py-3">
-                                <h6 class="m-0 fw-bold text-success"><i class="bi bi-calendar-event me-2"></i>Upcoming Club Events</h6>
+                                <h6 class="m-0 fw-bold text-success"><i class="bi bi-calendar-event me-2"></i>Upcoming
+                                    Club Events</h6>
                             </div>
                             <div class="card-body p-0">
                                 <?php if (!empty($upcomingEventsList)): ?>
@@ -256,11 +281,14 @@ $recentUsers = $stmt->fetchAll();
                                         <?php foreach ($upcomingEventsList as $event): ?>
                                             <div class="list-group-item p-3">
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                                    <span class="fw-bold small text-primary"><?= htmlspecialchars($event['eventTitle']) ?></span>
-                                                    <span class="badge bg-light text-dark border small"><?= date('d M Y', strtotime($event['eventDate'])) ?></span>
+                                                    <span
+                                                        class="fw-bold small text-primary"><?= htmlspecialchars($event['eventTitle']) ?></span>
+                                                    <span
+                                                        class="badge bg-light text-dark border small"><?= date('d M Y', strtotime($event['eventDate'])) ?></span>
                                                 </div>
                                                 <div class="text-muted small mb-1">
-                                                    <i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($event['eventVenue']) ?>
+                                                    <i
+                                                        class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($event['eventVenue']) ?>
                                                 </div>
                                                 <div class="text-secondary small font-monospace">
                                                     <i class="bi bi-shield me-1"></i><?= htmlspecialchars($event['clubName']) ?>

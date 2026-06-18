@@ -1,4 +1,7 @@
 <?php
+// ==========================================
+// [SESSION INITIALIZATION & ADMIN CHECK]
+// ==========================================
 session_start();
 require_once __DIR__ . '/../db_connect.php';
 
@@ -12,6 +15,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Administrator') {
 $message = '';
 $messageType = '';
 
+// ==========================================
+// [USER ACCOUNT DELETION TRANSACTION]
+// ==========================================
 if (isset($_GET['delete'])) {
     $delete_id = $_GET['delete'];
 
@@ -36,11 +42,48 @@ if (isset($_GET['delete'])) {
     }
 }
 
+// ==========================================
+// [SEARCH FILTERING & RETRIEVAL LOGIC]
+// ==========================================
 $search = trim($_GET['search'] ?? '');
+$role_filter = $_GET['role_filter'] ?? 'all';
+$programme_filter = $_GET['programme_filter'] ?? 'all';
+$status_filter = $_GET['status_filter'] ?? 'all';
+
 $params = [];
+$where_clauses = [];
+
+if ($search !== '') {
+    $where_clauses[] = "(u.userName LIKE ? OR u.userEmail LIKE ? OR s.studentID LIKE ? OR a.staffID LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+}
+
+if ($role_filter !== 'all') {
+    if ($role_filter === 'Committee') {
+        $where_clauses[] = "u.userRole = 'Student' AND cm.membershipRole IS NOT NULL AND cm.membershipRole != 'Member'";
+    } else {
+        $where_clauses[] = "u.userRole = ?";
+        $params[] = $role_filter;
+    }
+}
+
+if ($programme_filter !== 'all') {
+    $where_clauses[] = "s.programmeName = ?";
+    $params[] = $programme_filter;
+}
+
+if ($status_filter !== 'all') {
+    $where_clauses[] = "u.userStatus = ?";
+    $params[] = $status_filter;
+}
+
 $sql = "SELECT 
             u.*, 
             s.studentID, 
+            s.programmeName,
             a.staffID,
             cm.membershipRole
         FROM user u 
@@ -48,9 +91,8 @@ $sql = "SELECT
         LEFT JOIN admin a ON u.User_ID = a.User_ID
         LEFT JOIN club_membership cm ON u.User_ID = cm.User_ID";
 
-if ($search !== '') {
-    $sql .= " WHERE u.userName LIKE ? OR u.userEmail LIKE ? OR s.studentID LIKE ? OR a.staffID LIKE ?";
-    $params = ["%$search%", "%$search%", "%$search%", "%$search%"];
+if (!empty($where_clauses)) {
+    $sql .= " WHERE " . implode(" AND ", $where_clauses);
 }
 
 $sql .= " ORDER BY u.User_ID DESC";
@@ -68,6 +110,7 @@ $users = $stmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Users - FK System</title>
     <link href="../STYLE/BOOTSTRAP/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 </head>
 
 <body>
@@ -78,6 +121,9 @@ $users = $stmt->fetchAll();
 
         <?php include '../sidebar.php'; ?>
 
+        <!-- ========================================== -->
+        <!-- [USER ACCOUNTS DASHBOARD & CRUD VIEW] -->
+        <!-- ========================================== -->
         <div id="content">
 
             <div class="container-fluid">
@@ -90,20 +136,71 @@ $users = $stmt->fetchAll();
                     </a>
                 </div>
 
-                <!-- Search Filter Form -->
+                <!-- Search & Filter Card -->
                 <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-body py-3">
-                        <form method="GET" class="row g-3 align-items-center">
-                            <div class="col-md-6">
+                    <div class="card-body p-4">
+                        <form method="GET" class="row g-3">
+                            <!-- Search Input -->
+                            <div class="col-md-3">
+                                <label for="searchInput" class="form-label small fw-bold text-secondary">Search
+                                    Keyword</label>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
-                                    <input type="text" name="search" class="form-control" placeholder="Search by name, email, student ID, or staff ID..." value="<?php echo htmlspecialchars($search); ?>">
+                                    <input type="text" name="search" id="searchInput" class="form-control"
+                                        placeholder="Search by name, email, ID..."
+                                        value="<?php echo htmlspecialchars($search); ?>">
                                 </div>
                             </div>
-                            <div class="col-md-6 d-flex gap-2">
-                                <button type="submit" class="btn btn-sm btn-primary">Search</button>
-                                <?php if ($search !== ''): ?>
-                                    <a href="manage_users.php" class="btn btn-sm btn-outline-secondary">Clear</a>
+
+                            <!-- Role Filter -->
+                            <div class="col-md-3">
+                                <label for="roleFilterSelect" class="form-label small fw-bold text-secondary">User
+                                    Role</label>
+                                <select name="role_filter" id="roleFilterSelect" class="form-select form-select-sm">
+                                    <option value="all" <?php echo $role_filter === 'all' ? 'selected' : ''; ?>>All Roles
+                                    </option>
+                                    <option value="Student" <?php echo $role_filter === 'Student' ? 'selected' : ''; ?>>
+                                        Student (Regular)</option>
+                                    <option value="Committee" <?php echo $role_filter === 'Committee' ? 'selected' : ''; ?>>Student (Committee)</option>
+                                    <option value="Administrator" <?php echo $role_filter === 'Administrator' ? 'selected' : ''; ?>>Administrator</option>
+                                </select>
+                            </div>
+
+                            <!-- Programme Filter -->
+                            <div class="col-md-3">
+                                <label for="programmeFilterSelect"
+                                    class="form-label small fw-bold text-secondary">Academic Programme</label>
+                                <select name="programme_filter" id="programmeFilterSelect"
+                                    class="form-select form-select-sm">
+                                    <option value="all" <?php echo $programme_filter === 'all' ? 'selected' : ''; ?>>All
+                                        Programmes</option>
+                                    <option value="Software Engineering" <?php echo $programme_filter === 'Software Engineering' ? 'selected' : ''; ?>>Software Engineering</option>
+                                    <option value="Multimedia Software" <?php echo $programme_filter === 'Multimedia Software' ? 'selected' : ''; ?>>Multimedia Software</option>
+                                    <option value="Computer System & Networking" <?php echo $programme_filter === 'Computer System & Networking' ? 'selected' : ''; ?>>
+                                        Computer System & Networking</option>
+                                    <option value="Cyber Security" <?php echo $programme_filter === 'Cyber Security' ? 'selected' : ''; ?>>Cyber Security</option>
+                                </select>
+                            </div>
+
+                            <!-- User Status Filter -->
+                            <div class="col-md-3">
+                                <label for="statusFilterSelect" class="form-label small fw-bold text-secondary">User
+                                    Status</label>
+                                <select name="status_filter" id="statusFilterSelect" class="form-select form-select-sm">
+                                    <option value="all" <?php echo $status_filter === 'all' ? 'selected' : ''; ?>>All
+                                        Statuses</option>
+                                    <option value="Active" <?php echo $status_filter === 'Active' ? 'selected' : ''; ?>>
+                                        Active</option>
+                                    <option value="Inactive" <?php echo $status_filter === 'Inactive' ? 'selected' : ''; ?>>Inactive</option>
+                                </select>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="col-md-12 d-flex justify-content-end gap-2 mt-2">
+                                <button type="submit" class="btn btn-sm btn-primary px-3">Apply Filters</button>
+                                <?php if ($search !== '' || $role_filter !== 'all' || $programme_filter !== 'all' || $status_filter !== 'all'): ?>
+                                    <a href="manage_users.php" class="btn btn-sm btn-outline-secondary px-3">Reset
+                                        Filters</a>
                                 <?php endif; ?>
                             </div>
                         </form>
@@ -131,6 +228,7 @@ $users = $stmt->fetchAll();
                                         <th>Name</th>
                                         <th>Email</th>
                                         <th>Role</th>
+                                        <th>Academic Programme</th>
                                         <th>Membership Role</th>
                                         <th>Status</th>
                                         <th class="text-end pe-4">Actions</th>
@@ -162,11 +260,21 @@ $users = $stmt->fetchAll();
 
                                             <td>
                                                 <span class="badge bg-light text-dark border">
-                                                    <?php 
+                                                    <?php
                                                     $isCommitteeUser = ($u['userRole'] === 'Student' && !empty($u['membershipRole']) && $u['membershipRole'] !== 'Member');
-                                                    echo $isCommitteeUser ? 'Student (Committee)' : htmlspecialchars($u['userRole']); 
+                                                    echo $isCommitteeUser ? 'Student (Committee)' : htmlspecialchars($u['userRole']);
                                                     ?>
                                                 </span>
+                                            </td>
+
+                                            <td>
+                                                <?php
+                                                if ($u['userRole'] === 'Student') {
+                                                    echo htmlspecialchars($u['programmeName'] ?? '-');
+                                                } else {
+                                                    echo '-';
+                                                }
+                                                ?>
                                             </td>
 
                                             <td>
@@ -180,7 +288,11 @@ $users = $stmt->fetchAll();
                                             </td>
 
                                             <td>
-                                                <span class="badge bg-success">Active</span>
+                                                <?php
+                                                $status = htmlspecialchars($u['userStatus'] ?? 'Active');
+                                                $badgeClass = ($status === 'Active') ? 'bg-success' : 'bg-danger';
+                                                ?>
+                                                <span class="badge <?php echo $badgeClass; ?>"><?php echo $status; ?></span>
                                             </td>
 
                                             <td class="text-end pe-4">

@@ -944,7 +944,6 @@ try {
                         </button>
                     </div>
 
-
                     <div class="col-sm-auto d-flex gap-2">
     <input id="tableSearch" class="form-control text-sm" placeholder="Search clubs..." type="text" onkeyup="filterTable()" />
     
@@ -962,6 +961,22 @@ try {
         <option value="Inactive">Inactive</option>
     </select>
 </div>
+                    <div class="col-sm-auto d-flex gap-2 match-filters-width">
+                        <div class="position-relative" style="min-width: 260px;">
+                            <input id="tableSearch" onkeyup="filterTable()" class="form-control text-sm"
+                                placeholder="Search clubs by name or advisor..." type="text" />
+                        </div>
+
+                        <div>
+                            <select id="statusFilter" onchange="filterTable()" class="form-select text-sm bg-white"
+                                style="min-width: 140px;">
+                                <option value="">All Status</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="card border-0 shadow-sm overflow-hidden table-container mb-4">
                     <div class="table-responsive">
@@ -1291,8 +1306,7 @@ try {
 
                 // 1. Text Search filtering (Club Name & Advisor Name)
                 const matchSearch = row.cells[1].innerText.toLowerCase().includes(s) ||
-                                    row.cells[2].innerText.toLowerCase().includes(s);
-
+                    row.cells[2].innerText.toLowerCase().includes(s);
                 // 2. Member Count dropdown filtering
                 const memberCount = parseInt(row.cells[3].innerText.trim()) || 0;
                 let matchMember = false;
@@ -1307,6 +1321,9 @@ try {
                 } else if (memberFilterVal === "large" && memberCount > 5) {
                     matchMember = true;
                 }
+
+               const matchStatus = statusVal === "" ||
+                    row.cells[4].innerText.trim() === statusVal;
 
                 // 3. Status filter selection
                 const matchStatus = statusVal === "" ||
@@ -1412,6 +1429,18 @@ try {
 
         function escapeJsString(text) {
             return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+
+        function escapeHtml(str) {
+            return str ? str.replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;") : '';
+        }
+
+        function escapeJsString(str) {
+            return str ? str.replace(/'/g, "\\'")
+                .replace(/"/g, '\\"') : '';
         }
     </script>
 
